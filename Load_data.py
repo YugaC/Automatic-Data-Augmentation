@@ -9,8 +9,7 @@ def load_nii_to_array(nii_path):
 
 def prepare_datasets(data_dir):
     # List files in data_dir, load them, and split into train/test
-    # Dummy function - replace paths and logic as needed
     files = [f"{data_dir}/{f}" for f in os.listdir(data_dir) if f.endswith('.nii.gz')]
-    data = [load_nii(f) for f in files]
+    data = [load_nii_to_array(f) for f in files]  # Corrected from load_nii to load_nii_to_array
     train, test = train_test_split(data, test_size=0.2, random_state=42)
     return train, test
