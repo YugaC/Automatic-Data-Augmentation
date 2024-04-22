@@ -1,4 +1,2 @@
-#print("Hello World")
-
-def hello():
-    print("Hello Yugashree")
+import torch
+print(torch.__version__)
