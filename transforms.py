@@ -14,7 +14,7 @@ train_transforms = Compose([
         b_max=1.0,
         clip=True
     ),
-    DivisiblePadd(keys=["image", "label"], k=2),
+    DivisiblePadd(keys=["image", "label"],k=16),
     #Resize(spatial_size=(128, 128, 80), mode='area'),  # Add Resize for image
     #Pad(keys=["image"], spatial_border=(0, 0, 1)),  # Adjust padding as needed
     ToTensor(),  # Convert both image and label to tensors
@@ -37,7 +37,7 @@ val_transforms = Compose([
         b_max=1.0,
         clip=True
     ),
-    DivisiblePadd(keys=["image", "label"], k=2),
+    DivisiblePadd(keys=["image", "label"],k=16),
     #Resize(spatial_size=(128, 128, 80), mode='area'),  # Add Resize for image
     #Pad(keys=["image"], spatial_border=(0, 0, 1)),  # Ensure padding is applied correctly
     ToTensor(),

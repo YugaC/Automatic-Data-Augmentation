@@ -5,14 +5,19 @@ from Load_data import *
 from Train_and_validate_datasets_without_caching import *
 
 
-max_epochs = 600
+max_epochs = 10
 val_interval = 2
 best_metric = -1
 best_metric_epoch = -1
 epoch_loss_values = []
 metric_values = []
-post_pred = Compose([AsDiscrete(argmax=True, to_onehot=2)])
-post_label = Compose([AsDiscrete(to_onehot=2)])
+post_pred = Compose([AsDiscrete(argmax=True, to_onehot=16)])
+post_label = Compose([AsDiscrete(to_onehot=16)])
+
+
+root_dir = 'C:/Users/Yugashree/Automatic-Data-Augmentation'
+if not os.path.exists(root_dir):
+    os.makedirs(root_dir)
 
 if __name__ == '__main__':
     for epoch in range(max_epochs):
