@@ -1,11 +1,4 @@
-import os
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-from monai.networks.nets import UNet
-from monai.networks.layers import Norm
-from monai.losses import DiceLoss
-from monai.metrics import DiceMetric
-from monai.data import DataLoader
-import torch
+from imports import *
 
 # standard PyTorch program style: create UNet, DiceLoss and Adam optimizer
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
