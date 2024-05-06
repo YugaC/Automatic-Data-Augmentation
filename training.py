@@ -5,7 +5,7 @@ from Load_data import *
 from Train_and_validate_datasets_without_caching import *
 
 
-max_epochs = 10
+max_epochs = 1000
 val_interval = 2
 best_metric = -1
 best_metric_epoch = -1
@@ -20,6 +20,7 @@ if not os.path.exists(root_dir):
     os.makedirs(root_dir)
 
 if __name__ == '__main__':
+    print(f"Starting training with {len(train_loader)} batches per epoch.")
     for epoch in range(max_epochs):
         print("-" * 10)
         print(f"epoch {epoch + 1}/{max_epochs}")
@@ -33,7 +34,11 @@ if __name__ == '__main__':
                 batch_data["label"].to(device),
             )
             def print_tensor_dimensions(tensor, description):
-                print(f"{description} shape: {tensor.shape}")
+                if isinstance(tensor, list):
+                    for idx, t in enumerate(tensor):
+                        print(f"{description}[{idx}] shape: {t.shape}")
+                else:
+                    print(f"{description} shape: {tensor.shape}")
 
             # Print the shape of the input tensor
             print_tensor_dimensions(inputs, "Input tensor")
@@ -48,9 +53,13 @@ if __name__ == '__main__':
             epoch_loss += loss.item()
             print(f"{step}/{len(train_ds) // train_loader.batch_size}, train_loss: {loss.item():.4f}")
         
-        epoch_loss /= step
-        epoch_loss_values.append(epoch_loss)
-        print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
+        if step > 0:  # Check if any steps were executed
+            epoch_loss /= step
+            epoch_loss_values.append(epoch_loss)
+            print("epochLossValues are:",epoch_loss_values)
+            print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
+        else:
+            print("No data processed in epoch.")
 
         if (epoch + 1) % val_interval == 0:
             model.eval()
@@ -62,11 +71,15 @@ if __name__ == '__main__':
                     )
                     print_tensor_dimensions(val_inputs, "Validation input tensor")
                     
-                    roi_size = (160, 160, 160)
+                    roi_size = (128, 128, 80)
                     sw_batch_size = 4
                     val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model)
                     val_outputs = [post_pred(i) for i in decollate_batch(val_outputs)]
                     val_labels = [post_label(i) for i in decollate_batch(val_labels)]
+                    print_tensor_dimensions(val_outputs, "Validation outputs tensor")
+                    print_tensor_dimensions(val_labels, "Validation labels tensor")
+                    
+                    
                     
                     # compute metric for current iteration
                     dice_metric(y_pred=val_outputs, y=val_labels)
@@ -87,3 +100,20 @@ if __name__ == '__main__':
                         f"\nbest mean dice: {best_metric:.4f} "
                         f"at epoch: {best_metric_epoch}"
                     )
+                    
+    plt.figure("train", (12, 6))
+    plt.subplot(1, 2, 1)
+    plt.title("Epoch Average Loss")
+    x = [i + 1 for i in range(len(epoch_loss_values))]
+    y = epoch_loss_values
+    plt.xlabel("epoch")
+    plt.plot(x, y)
+    plt.subplot(1, 2, 2)
+    plt.title("Val Mean Dice")
+    x = [val_interval * (i + 1) for i in range(len(metric_values))]
+    y = metric_values
+    plt.xlabel("epoch")
+    plt.plot(x, y)
+    plt.show()              
+    
+    plt.savefig('training_and_validation_metrics.png')  # Specify the path if neededc

@@ -1,0 +1,81 @@
+C:\Users\Yugashree\Automatic-Data-Augmentation>python training.py
+----------
+epoch 1/10
+Input tensor shape: torch.Size([1, 1, 128, 128, 80])
+Output tensor after model forward pass shape: torch.Size([1, 16, 128, 128, 80])
+1/0, train_loss: 0.9894
+epoch 1 average loss: 0.9894
+----------
+epoch 2/10
+Input tensor shape: torch.Size([1, 1, 128, 128, 80])
+Output tensor after model forward pass shape: torch.Size([1, 16, 128, 128, 80])
+1/0, train_loss: 0.9885
+epoch 2 average loss: 0.9885
+Validation input tensor shape: torch.Size([1, 1, 128, 128, 80])
+saved new best metric model
+current epoch: 2 current mean dice: 0.0032
+best mean dice: 0.0032 at epoch: 2
+----------
+epoch 3/10
+Input tensor shape: torch.Size([1, 1, 128, 128, 80])
+Output tensor after model forward pass shape: torch.Size([1, 16, 128, 128, 80])
+1/0, train_loss: 0.9877
+epoch 3 average loss: 0.9877
+----------
+epoch 4/10
+Input tensor shape: torch.Size([1, 1, 128, 128, 80])
+Output tensor after model forward pass shape: torch.Size([1, 16, 128, 128, 80])
+1/0, train_loss: 0.9869
+epoch 4 average loss: 0.9869
+Validation input tensor shape: torch.Size([1, 1, 128, 128, 80])
+saved new best metric model
+current epoch: 4 current mean dice: 0.0039
+best mean dice: 0.0039 at epoch: 4
+----------
+epoch 5/10
+Input tensor shape: torch.Size([1, 1, 128, 128, 80])
+Output tensor after model forward pass shape: torch.Size([1, 16, 128, 128, 80])
+1/0, train_loss: 0.9861
+epoch 5 average loss: 0.9861
+----------
+epoch 6/10
+Input tensor shape: torch.Size([1, 1, 128, 128, 80])
+Output tensor after model forward pass shape: torch.Size([1, 16, 128, 128, 80])
+1/0, train_loss: 0.9854
+epoch 6 average loss: 0.9854
+Validation input tensor shape: torch.Size([1, 1, 128, 128, 80])
+saved new best metric model
+current epoch: 6 current mean dice: 0.0060
+best mean dice: 0.0060 at epoch: 6
+----------
+epoch 7/10
+Input tensor shape: torch.Size([1, 1, 128, 128, 80])
+Output tensor after model forward pass shape: torch.Size([1, 16, 128, 128, 80])
+1/0, train_loss: 0.9847
+epoch 7 average loss: 0.9847
+----------
+epoch 8/10
+Input tensor shape: torch.Size([1, 1, 128, 128, 80])
+Output tensor after model forward pass shape: torch.Size([1, 16, 128, 128, 80])
+1/0, train_loss: 0.9841
+epoch 8 average loss: 0.9841
+Validation input tensor shape: torch.Size([1, 1, 128, 128, 80])
+saved new best metric model
+current epoch: 8 current mean dice: 0.0066
+best mean dice: 0.0066 at epoch: 8
+----------
+epoch 9/10
+Input tensor shape: torch.Size([1, 1, 128, 128, 80])
+Output tensor after model forward pass shape: torch.Size([1, 16, 128, 128, 80])
+1/0, train_loss: 0.9834
+epoch 9 average loss: 0.9834
+----------
+epoch 10/10
+Input tensor shape: torch.Size([1, 1, 128, 128, 80])
+Output tensor after model forward pass shape: torch.Size([1, 16, 128, 128, 80])
+1/0, train_loss: 0.9827
+epoch 10 average loss: 0.9827
+Validation input tensor shape: torch.Size([1, 1, 128, 128, 80])
+saved new best metric model
+current epoch: 10 current mean dice: 0.0071
+best mean dice: 0.0071 at epoch: 10

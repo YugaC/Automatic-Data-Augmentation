@@ -17,6 +17,8 @@ model = UNet(
 # Move the model to the appropriate device (GPU or CPU)
 model.to(device)
 
+#print(model.forward)
+
 loss_function = DiceLoss(to_onehot_y=True, softmax=True)
-optimizer = torch.optim.Adam(model.parameters(), 1e-4)
+optimizer = torch.optim.Adam(model.parameters(), 1e-3)
 dice_metric = DiceMetric(include_background=False, reduction="mean")
