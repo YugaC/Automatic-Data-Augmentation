@@ -1,4 +1,4 @@
-from Evaluation_Original_Image_Spacing import *
+from Evaluation_Original_Image_Spacing_trasnforms import *
 
 def ensure_dimensions(pred, label, desired_size=(128, 128, 80)):
     def adjust_tensor(tensor, target_dims):
@@ -88,3 +88,4 @@ with torch.no_grad():
 print("Metric on original image spacing: ", metric_org)
 
 #(Metric on original image spacing:  0.6458590030670166)
+#(Metric on original image spacing:  0.05522998422384262)

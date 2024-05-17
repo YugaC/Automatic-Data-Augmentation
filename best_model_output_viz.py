@@ -23,7 +23,7 @@ with torch.no_grad():
             ax.set_title(f"Label {label}")
             ax.axis("off")
 
-        plt.suptitle(f"Visualization of Predictions for Image {i}")
+        plt.suptitle(f"Best_Model_output {i}")
         plt.show()
 
         if i == 2:  # Stop after visualizing three samples

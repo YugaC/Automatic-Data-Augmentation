@@ -8,8 +8,6 @@ val_org_transforms = Compose(
     [
         LoadImaged(keys=["image", "label"]),
         EnsureChannelFirstd(keys=["image", "label"]),
-        #Spacingd(keys=["image"], pixdim=(1.5, 1.5, 2.0), mode="nearest"),
-        #Orientationd(keys=["image"], axcodes="RAS"),
         ScaleIntensityRanged(
             keys=["image"],
             a_min=-1000,
@@ -18,8 +16,10 @@ val_org_transforms = Compose(
             b_max=1.0,
             clip=True,
         ),
-        #DivisiblePadd(keys=["image", "label"],k=16),
-        SpatialPadd(keys=["image", "label"], spatial_size=(128, 128, 80), method='end'),  # Adjust `spatial_size` as needed
+        Orientationd(keys=["image", "label"], axcodes="RAS"),
+        Spacingd(keys=["image", "label"], pixdim=(0.782, 0.782, 5.0), mode=("nearest")),
+        SpatialPadd(keys=["image", "label"], spatial_size=(128, 128, 80), method='end'),
+        Resized(keys=["image", "label"], spatial_size=(128, 128, 80), mode='nearest'),  # Add Resize for image
         PrintShape(),
     ]
 )

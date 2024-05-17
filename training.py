@@ -56,8 +56,8 @@ if __name__ == '__main__':
         if step > 0:  # Check if any steps were executed
             epoch_loss /= step
             epoch_loss_values.append(epoch_loss)
-            print("epochLossValues are:",epoch_loss_values)
-            print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
+            #print("epochLossValues are:",epoch_loss_values)
+            #print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
         else:
             print("No data processed in epoch.")
 

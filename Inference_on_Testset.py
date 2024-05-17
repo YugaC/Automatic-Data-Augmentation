@@ -1,6 +1,7 @@
 from imports import *
 from Load_data import *
 
+
 test_images = sorted(glob.glob(os.path.join(data_dir, "image", "*.nii")))
 
 test_data = [{"image": image} for image in test_images]
@@ -10,8 +11,8 @@ test_org_transforms = Compose(
     [
         LoadImaged(keys="image"),
         EnsureChannelFirstd(keys="image"),
-        #Orientationd(keys=["image"], axcodes="RAS"),
-        #Spacingd(keys=["image"], pixdim=(1.5, 1.5, 2.0), mode="bilinear"),
+        Orientationd(keys=["image"], axcodes="RAS"),
+        Spacingd(keys=["image"], pixdim=(1.0, 1.0, 5.0), mode="nearest"),
         ScaleIntensityRanged(
             keys=["image"],
             a_min=-1000,
@@ -41,7 +42,8 @@ post_transforms = Compose(
             to_tensor=True,
         ),
         AsDiscreted(keys="pred", argmax=True, to_onehot=16),
-        SaveImaged(keys="pred", meta_keys="pred_meta_dict", output_dir="./out", output_postfix="seg", resample=False),
+        SaveImaged(keys="pred", meta_keys="pred_meta_dict", output_dir="./new_out", output_postfix="seg", resample=False),
+        
     ]
 )
 

@@ -14,11 +14,13 @@ train_transforms = Compose([
         b_max=1.0,
         clip=True
     ),
+    Orientationd(keys=["image", "label"], axcodes="RAS"),
+    Spacingd(keys=["image", "label"], pixdim=(0.782, 0.782, 5.0), mode=("nearest")),
     SpatialPadd(keys=["image", "label"], spatial_size=(128, 128, 80), method='end'),
     #DivisiblePadd(keys=["image", "label"],k=16),
     #Spacingd(keys=["image", "label"], pixdim=(1.5, 1.5, 1.5), mode=("nearest")),
     #Orientationd(keys=["image", "label"], axcodes="RAS"),
-    #Resize(spatial_size=(128, 128, 80), mode='area'),  # Add Resize for image
+    Resized(keys=["image", "label"], spatial_size=(128, 128, 80), mode='nearest'),  # Add Resize for image
     #Pad(keys=["image"], spatial_border=(0, 0, 1)),  # Adjust padding as needed
     ToTensor(),  # Convert both image and label to tensors
 ])
@@ -34,17 +36,19 @@ val_transforms = Compose([
     EnsureChannelFirstd(keys=["image", "label"]),
     ScaleIntensityRanged(
         keys=["image"],
-        a_min=-57,
-        a_max=164,
+        a_min=-1000,
+        a_max=1000,
         b_min=0.0,
         b_max=1.0,
         clip=True
     ),
+    Orientationd(keys=["image", "label"], axcodes="RAS"),
+    Spacingd(keys=["image", "label"], pixdim=(0.782, 0.782, 5.0), mode=("nearest")),
     SpatialPadd(keys=["image", "label"], spatial_size=(128, 128, 80), method='end'),
     #DivisiblePadd(keys=["image", "label"],k=16),
     #Spacingd(keys=["image", "label"], pixdim=(1.5, 1.5, 1.5), mode=("nearest")),
     #Orientationd(keys=["image", "label"], axcodes="RAS"),
-    #Resize(spatial_size=(128, 128, 80), mode='area'),  # Add Resize for image
+    Resized(keys=["image", "label"], spatial_size=(128, 128, 80), mode='nearest'),  # Add Resize for image
     #Pad(keys=["image"], spatial_border=(0, 0, 1)),  # Ensure padding is applied correctly
     ToTensor(),
 ])

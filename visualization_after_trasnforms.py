@@ -4,6 +4,12 @@ from transforms import *
 
 from monai.utils import first
 
+
+
+
+    
+    
+check_train = Dataset(data=train_files, transform=train_transforms)
 check_ds = Dataset(data=val_files, transform=val_transforms)
 check_loader = DataLoader(check_ds, batch_size=1)
 check_data = first(check_loader)

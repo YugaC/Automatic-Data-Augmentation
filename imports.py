@@ -3,7 +3,7 @@ import glob
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 from monai.transforms import (
     Compose, LoadImaged, EnsureChannelFirstd, ScaleIntensityRanged,
-    CropForegroundd, Orientationd, Spacingd, Pad,ToTensor,Resize,DivisiblePadd,AsDiscrete,Invertd,AsDiscrete,AsDiscreted,SpatialPadd,SaveImaged
+    CropForegroundd, Orientationd, Spacingd, Pad,ToTensor,Resized,DivisiblePadd,AsDiscrete,Invertd,AsDiscrete,AsDiscreted,SpatialPadd,SaveImaged,RandCropByPosNegLabeld
 )
 from monai.handlers.utils import from_engine
 from monai.networks.nets import UNet

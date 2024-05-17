@@ -22,9 +22,9 @@ def main():
 
             plt.figure("check", (18, 6))
             plt.subplot(1, 2, 1)
-            plt.imshow(original_image[:, :, 65], cmap="gray")
+            plt.imshow(original_image[:, :, 60], cmap="gray")
             plt.subplot(1, 2, 2)
-            plt.imshow(test_output[0].detach().cpu()[1, :, :, 65])
+            plt.imshow(test_output[0].detach().cpu()[1, :, :, 60])
             plt.show()
 
 if __name__ == '__main__':
