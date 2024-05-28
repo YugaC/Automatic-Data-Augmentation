@@ -11,8 +11,6 @@ test_org_transforms = Compose(
     [
         LoadImaged(keys="image"),
         EnsureChannelFirstd(keys="image"),
-        Orientationd(keys=["image"], axcodes="RAS"),
-        Spacingd(keys=["image"], pixdim=(1.0, 1.0, 5.0), mode="nearest"),
         ScaleIntensityRanged(
             keys=["image"],
             a_min=-1000,
@@ -21,6 +19,11 @@ test_org_transforms = Compose(
             b_max=1.0,
             clip=True,
         ),
+        Orientationd(keys=["image"], axcodes="RAS"),
+        Spacingd(keys=["image"], pixdim=(0.782, 0.782, 5.0), mode=("nearest")),
+        SpatialPadd(keys=["image"], spatial_size=(128, 128, 80), method='end'),
+        Resized(keys=["image"], spatial_size=(128, 128, 80), mode='nearest'),  # Add Resize for image
+        ToTensor(),
         #CropForegroundd(keys=["image"], source_key="image"),
     ]
 )
@@ -31,16 +34,7 @@ test_org_loader = DataLoader(test_org_ds, batch_size=1, num_workers=4)
 
 post_transforms = Compose(
     [
-        Invertd(
-            keys="pred",
-            transform=test_org_transforms,
-            orig_keys="image",
-            meta_keys="pred_meta_dict",
-            orig_meta_keys="image_meta_dict",
-            meta_key_postfix="meta_dict",
-            nearest_interp=False,
-            to_tensor=True,
-        ),
+        
         AsDiscreted(keys="pred", argmax=True, to_onehot=16),
         SaveImaged(keys="pred", meta_keys="pred_meta_dict", output_dir="./new_out", output_postfix="seg", resample=False),
         

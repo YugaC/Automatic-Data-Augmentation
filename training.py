@@ -5,7 +5,7 @@ from Load_data import *
 from Train_and_validate_datasets_without_caching import *
 
 
-max_epochs = 1000
+max_epochs = 600
 val_interval = 2
 best_metric = -1
 best_metric_epoch = -1
@@ -41,11 +41,11 @@ if __name__ == '__main__':
                     print(f"{description} shape: {tensor.shape}")
 
             # Print the shape of the input tensor
-            print_tensor_dimensions(inputs, "Input tensor")
+            #print_tensor_dimensions(inputs, "Input tensor")
 
             optimizer.zero_grad()
             outputs = model(inputs)
-            print_tensor_dimensions(outputs, "Output tensor after model forward pass")
+            #print_tensor_dimensions(outputs, "Output tensor after model forward pass")
             
             loss = loss_function(outputs, labels)
             loss.backward()
@@ -69,15 +69,15 @@ if __name__ == '__main__':
                         val_data["image"].to(device),
                         val_data["label"].to(device),
                     )
-                    print_tensor_dimensions(val_inputs, "Validation input tensor")
+                    #print_tensor_dimensions(val_inputs, "Validation input tensor")
                     
                     roi_size = (128, 128, 80)
                     sw_batch_size = 4
                     val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model)
                     val_outputs = [post_pred(i) for i in decollate_batch(val_outputs)]
                     val_labels = [post_label(i) for i in decollate_batch(val_labels)]
-                    print_tensor_dimensions(val_outputs, "Validation outputs tensor")
-                    print_tensor_dimensions(val_labels, "Validation labels tensor")
+                    #print_tensor_dimensions(val_outputs, "Validation outputs tensor")
+                    #print_tensor_dimensions(val_labels, "Validation labels tensor")
                     
                     
                     
