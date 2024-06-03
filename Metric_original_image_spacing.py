@@ -26,14 +26,13 @@ def visualize_predictions(inputs, labels, predictions, slice_idx=65):
 
     plt.subplot(1, 3, 2)
     plt.title("Label Slice")
-    plt.imshow(labels[0, :, :, slice_idx].cpu(), cmap="nipy_spectral")
+    plt.imshow(labels[0, :, :, slice_idx].cpu().squeeze(), cmap="nipy_spectral")
 
     plt.subplot(1, 3, 3)
     plt.title("Prediction Slice")
-    plt.imshow(predictions[0, :, :, slice_idx].cpu(), cmap="nipy_spectral")
+    plt.imshow(predictions[0, :, :, slice_idx].cpu().squeeze(), cmap="nipy_spectral")
 
     plt.show()
-
 
 def ensure_dimensions(pred, label, desired_size=(128, 128, 80)):
     def adjust_tensor(tensor, target_dims):
@@ -84,9 +83,27 @@ with torch.no_grad():
         roi_size = (128, 128, 80)
         sw_batch_size = 1
         val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model)
+        
+        # Print model output before argmax
+        print(f"Model output shape: {val_outputs.shape}")
+        print(f"Model output unique values before argmax: {torch.unique(val_outputs)}")
+        
+        # Visualize raw outputs for debugging
+        raw_output_slice = val_outputs[0, :, :, :, 65].cpu().numpy()
+        plt.figure(figsize=(10, 5))
+        plt.title("Raw Output Slice (Before Argmax)")
+        plt.imshow(np.max(raw_output_slice, axis=0), cmap="viridis")
+        plt.colorbar()
+        plt.show()
 
         # Apply argmax to the predictions to get the most likely class for each pixel
         val_outputs = torch.argmax(val_outputs, dim=1).detach().cpu()
+        
+        # Print model output after argmax
+        print(f"Model output shape after argmax: {val_outputs.shape}")
+        print(f"Model output unique values after argmax: {torch.unique(val_outputs)}")
+        
+
 
         # Ensure predictions and labels are tensors
         val_data_list = decollate_batch(val_data)
@@ -95,6 +112,17 @@ with torch.no_grad():
             val_data_list[idx] = post_transforms(data)
 
         val_outputs, val_labels = from_engine(["pred", "label"])(val_data_list)
+        
+         # Extract tensors from list for visualization
+        val_outputs_tensor = val_outputs[0]
+        val_labels_tensor = val_labels[0]
+        
+        # Print unique values in val_outputs_tensor for debugging
+        print(f"Unique values in val_outputs_tensor: {torch.unique(val_outputs_tensor)}")
+
+        # Visualize predictions
+        visualize_predictions(val_inputs.cpu(), val_labels_tensor, val_outputs_tensor)
+
 
         # Ensure dimensions match before computing the metric
         for i in range(len(val_outputs)):

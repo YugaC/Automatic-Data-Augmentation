@@ -19,6 +19,6 @@ model.to(device)
 
 #print(model.forward)
 
-loss_function = DiceLoss(to_onehot_y=True, softmax=True)
-optimizer = torch.optim.Adam(model.parameters(), 1e-3)
+loss_function = DiceCELoss(to_onehot_y=True, softmax=True)
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-5)
 dice_metric = DiceMetric(include_background=False, reduction="mean")

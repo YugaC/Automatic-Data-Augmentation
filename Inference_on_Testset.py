@@ -1,7 +1,26 @@
 from imports import *
 from Load_data import *
+from monai.transforms import EnsureType, AsDiscrete, Compose, Invertd, ToTensord
 
 
+# Custom transform to print affine matrices
+class ValidateAndAdjustAffine:
+    def __call__(self, data):
+        for key in ["pred"]:
+            if key in data:
+                affine = data[key].affine
+                print(f"Original affine matrix for {key}:")
+                print(affine)
+                # Ensure the affine matrix has 2 dimensions
+                if affine.ndim != 2:
+                    print(f"Adjusting affine matrix for {key} to 2D.")
+                    affine = affine.squeeze()
+                    data[key].affine = affine
+                print(f"Adjusted affine matrix for {key}:")
+                print(affine)
+        return data
+    
+    
 test_images = sorted(glob.glob(os.path.join(data_dir, "image", "*.nii")))
 
 test_data = [{"image": image} for image in test_images]
@@ -34,10 +53,10 @@ test_org_loader = DataLoader(test_org_ds, batch_size=1, num_workers=4)
 
 post_transforms = Compose(
     [
-        
-        AsDiscreted(keys="pred", argmax=True, to_onehot=16),
+        ToTensord(keys=["pred"]),  # Ensure data is in tensor format
+        #AsDiscreted(keys="pred", argmax=False, to_onehot=16),
+        ValidateAndAdjustAffine(),  # Custom transform to validate and adjust affine matrices
         SaveImaged(keys="pred", meta_keys="pred_meta_dict", output_dir="./new_out", output_postfix="seg", resample=False),
         
     ]
 )
-
