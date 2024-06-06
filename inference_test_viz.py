@@ -4,7 +4,8 @@ from monai.transforms import LoadImage
 import numpy as np
 from matplotlib.colors import ListedColormap
 from collections import Counter
-
+import matplotlib.pyplot as plt
+import torch.nn.functional as F
 
 def get_class_distribution(predictions):
     class_counts = Counter()
@@ -12,12 +13,11 @@ def get_class_distribution(predictions):
     class_counts.update(flat_predictions)
     return class_counts
 
-
-
 def main():
     loader = LoadImage()
     model.load_state_dict(torch.load(os.path.join(root_dir, "best_metric_model.pth")))
     model.eval()
+    
     # Define a specific color map for the 16 labels
     colors = [
         (0, 0, 0), (0.121, 0.466, 0.705), (1, 0.498, 0.054), (0.172, 0.627, 0.172), 
@@ -41,19 +41,23 @@ def main():
             plt.show()
 
             test_outputs = sliding_window_inference(test_inputs, roi_size, sw_batch_size, model)
-            print("Shape of test_data['pred']:", test_outputs.shape)
+            print("Shape of test_outputs after sliding_window_inference:", test_outputs.shape)
             
-            # Apply softmax and argmax directly to the tensor outputs
-            test_outputs = test_outputs.detach().cpu()
-
+            # Apply argmax to get the predicted class for each voxel
+            test_outputs = torch.argmax(test_outputs, dim=1, keepdim=True).detach().cpu()
+            print("Shape of test_outputs after argmax:", test_outputs.shape)
+            
             # Convert to dictionary format with "pred" key
             test_outputs_dict = {"pred": test_outputs}
+            print("Shape of test_outputs_dict['pred'] before post_transforms:", test_outputs_dict["pred"].shape)
 
             # Apply post transforms
             test_outputs_dict = post_transforms(test_outputs_dict)
+            print("Shape of test_outputs_dict['pred'] after post_transforms:", test_outputs_dict["pred"].shape)
 
             # Extract tensor data from dictionary
             test_outputs_tensor = test_outputs_dict["pred"]
+            print("Shape of test_outputs_tensor after squeezing:", test_outputs_tensor.shape)
             
             # Print raw model predictions
             raw_pred = test_outputs_tensor.numpy()
@@ -62,6 +66,7 @@ def main():
             test_data_list = decollate_batch(test_data)
             for idx, data in enumerate(test_data_list):
                 data["pred"] = test_outputs_tensor[idx:idx+1]  # Ensure batch dimension
+                print(f"Shape of data['pred'] for batch index {idx}:", data["pred"].shape)
                 # Handle missing 'image_meta_dict' key
                 if "image_meta_dict" in data:
                     data["pred_meta_dict"] = data["image_meta_dict"]
@@ -73,9 +78,14 @@ def main():
             # Visualize the input image and prediction
             test_image = test_data_list[0]["image"][0, :, :, :].cpu().numpy()  # Accessing from the first item in the list
             test_pred = test_outputs_list[0][0, :, :, :].cpu().numpy()    # Accessing from the first item in the list
+            print("Shape of test_image:", test_image.shape)
+            print("Shape of test_pred:", test_pred.shape)
 
-            test_pred_class = np.argmax(test_pred, axis=0)
-            
+            # Extract the specific slice for visualization
+            slice_index = 65  # Adjust the slice index as needed
+            test_pred_class = test_pred[0, :, :, slice_index]  # Remove the extra dimension
+            print("Shape of test_pred_class slice:", test_pred_class.shape)
+
             # Calculate class distribution in test predictions
             test_class_distribution = get_class_distribution(test_pred_class)
             print("Class Distribution in Test Predictions:", test_class_distribution)
@@ -84,11 +94,11 @@ def main():
             plt.figure(figsize=(12, 6))
             plt.subplot(1, 2, 1)
             plt.title("Input Image")
-            plt.imshow(test_image[:, :, 65], cmap="gray")  # Adjust the slice index as needed
+            plt.imshow(test_image[:, :, slice_index], cmap="gray")  # Adjust the slice index as needed
 
             plt.subplot(1, 2, 2)
             plt.title("Prediction")
-            plt.imshow(test_pred_class[:, :, 65], cmap=cmap)  # Adjust the slice index as needed
+            plt.imshow(test_pred_class, cmap=cmap)  # Adjust the slice index as needed
             plt.colorbar(ticks=range(16), label='Class Labels')  # Add colorbar with class labels
 
             plt.show()

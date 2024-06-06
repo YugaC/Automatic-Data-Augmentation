@@ -59,13 +59,14 @@ val_org_transforms = Compose(
 post_transforms = Compose(
     [
         ToTensord(keys=["pred", "label"]),
-        EnsureChannelFirstd(keys=["pred", "label"]),  # Ensure the channel dimension exists
+        #EnsureChannelFirstd(keys=["pred", "label"]),  # Ensure the channel dimension exists
+        EnsureType(),
         #AsDiscreted(keys="label", to_onehot=16),
         #AsDiscreted(keys="pred", argmax=False, to_onehot=16),
         ValidateAndAdjustAffine(),
         #PrintMetadata(),  # Print metadata before saving
-        SaveImaged(keys="label", output_dir="./ValidationOutput", output_postfix="label", resample=False),
-        SaveImaged(keys="pred", output_dir="./ValidationOutput", output_postfix="pred", resample=False),
+        SaveImaged(keys="label", output_dir="./ValidationOutput", output_postfix="label", resample=False, print_log=True),
+        SaveImaged(keys="pred", output_dir="./ValidationOutput", output_postfix="pred", resample=False, print_log=True),
     ]
 )
 
@@ -84,21 +85,25 @@ def print_affine_before_saving(data_loader, post_transforms):
             data_list = decollate_batch(data)
             for idx, item in enumerate(data_list):
                 item["pred"] = val_outputs[idx:idx+1]  # Ensure batch dimension
-                print("Affine matrix before saving (pred):", item["pred"].affine)
-                print("Affine matrix before saving (label):", item["label"].affine)
-                print("Metadata before saving:")
-                print(item["pred"].meta)
+                #print("Affine matrix before saving (pred):", item["pred"].affine)
+                #print("Affine matrix before saving (label):", item["label"].affine)
+                #print("Metadata before saving:")
+                #print(item["pred"].meta)
                 
                 # Debugging each step
                 print(f"Before ToTensord - pred unique values: {torch.unique(item['pred'])}")
-                item = ToTensord(keys=["pred", "label"])(item)
-                #print(f"After ToTensord - pred unique values: {torch.unique(item['pred'])}")
+                #item = ToTensord(keys=["pred", "label"])(item)
+                print(f"After ToTensord - pred unique values: {torch.unique(item['pred'])}")
 
+                
+                print("Shape before saving - pred:", item["pred"].shape)
+                print("Shape before saving - label:", item["label"].shape)
+                
                 #item = AsDiscreted(keys="label", to_onehot=16)(item)
-                print(f"After AsDiscreted(label) - label unique values: {torch.unique(item['label'])}")
+                #print(f"After AsDiscreted(label) - label unique values: {torch.unique(item['label'])}")
 
                 #item = AsDiscreted(keys="pred", argmax=False, to_onehot=16)(item)
-                print(f"After AsDiscreted(pred) - pred unique values: {torch.unique(item['pred'])}")
+                #print(f"After AsDiscreted(pred) - pred unique values: {torch.unique(item['pred'])}")
 
                 
                 data_list[idx] = post_transforms(item)
