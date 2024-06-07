@@ -34,6 +34,21 @@ class PrintMetadata:
                 # Print other relevant metadata if needed
         return data
 
+    
+def visualize_slice(data, slice_index, title, axis=2):
+    if axis == 0:
+        slice_data = data[slice_index, :, :]
+    elif axis == 1:
+        slice_data = data[:, slice_index, :]
+    else:
+        slice_data = data[:, :, slice_index]
+
+    plt.figure(figsize=(6, 6))
+    plt.title(f"{title} - Slice {slice_index} along axis {axis}")
+    plt.imshow(slice_data.T, cmap="gray", origin="lower")
+    plt.colorbar()
+    plt.show()
+
 # Define validation transforms
 val_org_transforms = Compose(
     [
@@ -55,6 +70,10 @@ val_org_transforms = Compose(
     ]
 )
 
+# Load data
+val_org_ds = Dataset(data=val_files, transform=val_org_transforms)
+val_org_loader = DataLoader(val_org_ds, batch_size=1, num_workers=0)
+
 # Define post transforms
 post_transforms = Compose(
     [
@@ -70,45 +89,5 @@ post_transforms = Compose(
     ]
 )
 
-# Load data
-val_org_ds = Dataset(data=val_files, transform=val_org_transforms)
-val_org_loader = DataLoader(val_org_ds, batch_size=1, num_workers=0)
 
-# Function to print affine matrices before saving
-def print_affine_before_saving(data_loader, post_transforms):
-    with torch.no_grad():
-        for data in data_loader:
-            val_inputs = data["image"].to(device)
-            val_outputs = sliding_window_inference(val_inputs, (128, 128, 80), 1, model)
-            val_outputs = torch.argmax(val_outputs, dim=1).detach().cpu()
 
-            data_list = decollate_batch(data)
-            for idx, item in enumerate(data_list):
-                item["pred"] = val_outputs[idx:idx+1]  # Ensure batch dimension
-                #print("Affine matrix before saving (pred):", item["pred"].affine)
-                #print("Affine matrix before saving (label):", item["label"].affine)
-                #print("Metadata before saving:")
-                #print(item["pred"].meta)
-                
-                # Debugging each step
-                print(f"Before ToTensord - pred unique values: {torch.unique(item['pred'])}")
-                #item = ToTensord(keys=["pred", "label"])(item)
-                print(f"After ToTensord - pred unique values: {torch.unique(item['pred'])}")
-
-                
-                print("Shape before saving - pred:", item["pred"].shape)
-                print("Shape before saving - label:", item["label"].shape)
-                
-                #item = AsDiscreted(keys="label", to_onehot=16)(item)
-                #print(f"After AsDiscreted(label) - label unique values: {torch.unique(item['label'])}")
-
-                #item = AsDiscreted(keys="pred", argmax=False, to_onehot=16)(item)
-                #print(f"After AsDiscreted(pred) - pred unique values: {torch.unique(item['pred'])}")
-
-                
-                data_list[idx] = post_transforms(item)
-
-            break  # Check for the first batch
-
-# Print affine matrices before saving
-print_affine_before_saving(val_org_loader, post_transforms)
