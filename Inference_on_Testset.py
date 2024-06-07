@@ -42,7 +42,7 @@ test_org_transforms = Compose(
         Spacingd(keys=["image"], pixdim=(0.782, 0.782, 5.0), mode=("nearest")),
         SpatialPadd(keys=["image"], spatial_size=(128, 128, 80), method='end'),
         Resized(keys=["image"], spatial_size=(128, 128, 80), mode='nearest'),  # Add Resize for image
-        ToTensord(keys="image"),
+        #ToTensord(keys="image"),
         #CropForegroundd(keys=["image"], source_key="image"),
     ]
 )
@@ -53,11 +53,11 @@ test_org_loader = DataLoader(test_org_ds, batch_size=1, num_workers=4)
 
 post_transforms = Compose(
     [
-        #ToTensord(keys="pred"),  # Ensure data is in tensor format
+        ToTensord(keys="pred"),  # Ensure data is in tensor format
         EnsureType(),
         #AsDiscreted(keys="pred", argmax=False, to_onehot=16),
         ValidateAndAdjustAffine(),  # Custom transform to validate and adjust affine matrices
-        SaveImaged(keys="pred", meta_keys="pred_meta_dict", output_dir="./new_out", output_postfix="seg", resample=False,separate_folder=False),
+        SaveImaged(keys="pred", output_dir="./new_out", output_postfix="seg", resample=False,separate_folder=False),
         
     ]
 )

@@ -32,7 +32,7 @@ def main():
         for test_data in test_org_loader:
             test_inputs = test_data["image"].to(device)
             roi_size = (128, 128, 80)
-            sw_batch_size = 4
+            sw_batch_size = 1
             
             # Visualize the input image
             plt.figure(figsize=(6, 6))
@@ -42,37 +42,53 @@ def main():
 
             test_outputs = sliding_window_inference(test_inputs, roi_size, sw_batch_size, model)
             print("Shape of test_outputs after sliding_window_inference:", test_outputs.shape)
-            
+            print(f"Model output unique values before argmax: {torch.unique(test_outputs)}")
+                
             # Apply argmax to get the predicted class for each voxel
-            test_outputs = torch.argmax(test_outputs, dim=1, keepdim=True).detach().cpu()
+            test_outputs = torch.argmax(test_outputs, dim=1).detach().cpu()
+            
             print("Shape of test_outputs after argmax:", test_outputs.shape)
+            print(f"Model output unique values after argmax: {torch.unique(test_outputs)}")
+                
             
             # Convert to dictionary format with "pred" key
-            test_outputs_dict = {"pred": test_outputs}
-            print("Shape of test_outputs_dict['pred'] before post_transforms:", test_outputs_dict["pred"].shape)
+            #test_outputs_dict = {"pred": test_outputs}
+            #print("Shape of test_outputs_dict['pred'] before post_transforms:", test_outputs_dict["pred"].shape)
 
             # Apply post transforms
-            test_outputs_dict = post_transforms(test_outputs_dict)
-            print("Shape of test_outputs_dict['pred'] after post_transforms:", test_outputs_dict["pred"].shape)
+            #test_outputs_dict = post_transforms(test_outputs_dict)
+            #print("Shape of test_outputs_dict['pred'] after post_transforms:", test_outputs_dict["pred"].shape)
 
             # Extract tensor data from dictionary
-            test_outputs_tensor = test_outputs_dict["pred"]
-            print("Shape of test_outputs_tensor after squeezing:", test_outputs_tensor.shape)
+            #test_outputs_tensor = test_outputs_dict["pred"]
+            #print("Shape of test_outputs_tensor after squeezing:", test_outputs_tensor.shape)
             
             # Print raw model predictions
-            raw_pred = test_outputs_tensor.numpy()
-            print(f"Raw model predictions: min={raw_pred.min()}, max={raw_pred.max()}, mean={raw_pred.mean()}")
+            #raw_pred = test_outputs_tensor.numpy()
+            #print(f"Raw model predictions: min={raw_pred.min()}, max={raw_pred.max()}, mean={raw_pred.mean()}")
 
             test_data_list = decollate_batch(test_data)
             for idx, data in enumerate(test_data_list):
-                data["pred"] = test_outputs_tensor[idx:idx+1]  # Ensure batch dimension
-                print(f"Shape of data['pred'] for batch index {idx}:", data["pred"].shape)
+                data["pred"] = test_outputs[idx:idx+1]  # Ensure batch dimension
+                test_data_list[idx] = post_transforms(data)
+            test_outputs = from_engine(["pred"])(test_data_list)    
+                
+                #print(f"Shape of data['pred'] for batch index {idx}:", data["pred"].shape)
                 # Handle missing 'image_meta_dict' key
-                if "image_meta_dict" in data:
-                    data["pred_meta_dict"] = data["image_meta_dict"]
-                else:
-                    data["pred_meta_dict"] = {"affine": np.eye(4)}  # Create a default affine if not present
+                #if "image_meta_dict" in data:
+                    #data["pred_meta_dict"] = data["image_meta_dict"]
+                #else:
+                    #data["pred_meta_dict"] = {"affine": np.eye(4)}  # Create a default affine if not present
 
+            
+            
+             # Extract tensors from list for visualization
+            test_outputs_tensor = test_outputs[0]
+            
+            
+             # Print unique values in val_outputs_tensor for debugging
+            print(f"Unique values in test_outputs_tensor: {torch.unique(test_outputs_tensor)}")
+        
             # Extract predictions from the list
             test_outputs_list = [d["pred"] for d in test_data_list]
             # Visualize the input image and prediction
@@ -83,9 +99,10 @@ def main():
 
             # Extract the specific slice for visualization
             slice_index = 65  # Adjust the slice index as needed
-            test_pred_class = test_pred[0, :, :, slice_index]  # Remove the extra dimension
+            test_pred_class = test_pred[:, :, slice_index]  # Remove the extra dimension
             print("Shape of test_pred_class slice:", test_pred_class.shape)
 
+        
             # Calculate class distribution in test predictions
             test_class_distribution = get_class_distribution(test_pred_class)
             print("Class Distribution in Test Predictions:", test_class_distribution)
