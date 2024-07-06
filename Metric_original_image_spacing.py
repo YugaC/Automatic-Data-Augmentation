@@ -22,17 +22,19 @@ def visualize_predictions(inputs, labels, predictions, slice_idx=65):
 
     plt.subplot(1, 3, 1)
     plt.title("Image Slice")
-    plt.imshow(inputs[0, 0, :, :, slice_idx].cpu(), cmap="gray")
+    #plt.imshow(inputs[0, 0, :, :, slice_idx].cpu(), cmap="gray")
 
     plt.subplot(1, 3, 2)
     plt.title("Label Slice")
-    plt.imshow(labels[0, :, :, slice_idx].cpu().squeeze(), cmap="nipy_spectral")
+    #plt.imshow(labels[0, :, :, slice_idx].cpu().squeeze(), cmap="nipy_spectral")
 
     plt.subplot(1, 3, 3)
     plt.title("Prediction Slice")
-    plt.imshow(predictions[0, :, :, slice_idx].cpu().squeeze(), cmap="nipy_spectral")
+    #plt.imshow(predictions[0, :, :, slice_idx].cpu().squeeze(), cmap="nipy_spectral")
 
-    plt.show()
+    #plt.show()
+
+
 
 def ensure_dimensions(pred, label, desired_size=(128, 128, 80)):
     def adjust_tensor(tensor, target_dims):
@@ -92,9 +94,9 @@ with torch.no_grad():
         raw_output_slice = val_outputs[0, :, :, :, 65].cpu().numpy()
         plt.figure(figsize=(10, 5))
         plt.title("Raw Output Slice (Before Argmax)")
-        plt.imshow(np.max(raw_output_slice, axis=0), cmap="viridis")
+        #plt.imshow(np.max(raw_output_slice, axis=0), cmap="viridis")
         plt.colorbar()
-        plt.show()
+        #plt.show()
 
         # Apply argmax to the predictions to get the most likely class for each pixel
         val_outputs = torch.argmax(val_outputs, dim=1).detach().cpu()

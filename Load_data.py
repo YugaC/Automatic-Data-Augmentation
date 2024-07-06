@@ -1,6 +1,7 @@
 import os
 import glob
 import nibabel as nib
+import config as cg
 
 def load_nii_info(file_path):
     # Load the NIfTI file
@@ -11,11 +12,12 @@ def load_nii_info(file_path):
     return shape, pixdim
 
 # Define the directory containing your data
-data_dir = 'C:/Users/Yugashree/Downloads/subset/debugging'
+data_dir = cg.get_config("data_dir")
+print(data_dir)
 
 # Collect file paths for images and labels
-train_images = sorted(glob.glob(os.path.join(data_dir, "image", "*.nii")))
-train_labels = sorted(glob.glob(os.path.join(data_dir, "label", "*.nii")))
+train_images = sorted(glob.glob(os.path.join(data_dir, "downsampled_image", "*.nii")))
+train_labels = sorted(glob.glob(os.path.join(data_dir, "downsampled_label", "*.nii")))
 
 # Iterate over each image and label pair to print their shape and pixel dimensions
 for img_path, lbl_path in zip(train_images, train_labels):
@@ -31,12 +33,12 @@ for img_path, lbl_path in zip(train_images, train_labels):
 data_dicts = [{"image": img, "label": lbl} for img, lbl in zip(train_images, train_labels)]
 
 #Calculate split index for an 80/20 ratio
-#split_index = int(Len(data_dicts) * 0.8
+split_index = int(len(data_dicts) * 0.8)
 
 #Split dATA into training nad validation sets
-#train_files = data_dicts[:split_index]
-#val_files = data_dicts[split_index:]
+train_files = data_dicts[:split_index]
+val_files = data_dicts[split_index:]
 
 #Use the same data for training and validation since only one pair exists
-train_files = data_dicts
-val_files = data_dicts
+#train_files = data_dicts
+#val_files = data_dicts

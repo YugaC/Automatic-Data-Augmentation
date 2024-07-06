@@ -14,4 +14,7 @@ x = [val_interval * (i + 1) for i in range(len(metric_values))]
 y = metric_values
 plt.xlabel("epoch")
 plt.plot(x, y)
-plt.show()              
+# Save the figure
+plt.savefig(os.path.join(root_dir, 'loss_metric_plot.png'))  # Specify the path if needed
+
+           

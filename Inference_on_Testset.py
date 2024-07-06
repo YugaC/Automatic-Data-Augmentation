@@ -1,7 +1,7 @@
 from imports import *
 from Load_data import *
 from monai.transforms import EnsureType, AsDiscrete, Compose, Invertd, ToTensord
-
+import config as cg
 
 # Custom transform to print affine matrices
 class ValidateAndAdjustAffine:
@@ -20,8 +20,8 @@ class ValidateAndAdjustAffine:
                 print(affine)
         return data
     
-data_dir = "C:/Users/Yugashree/Downloads/subset/debugging"   
-test_images = sorted(glob.glob(os.path.join(data_dir, "image", "*.nii")))
+data_dir_test = cg.get_config("data_dir_test")   
+test_images = sorted(glob.glob(os.path.join(data_dir_test, "image", "*.nii")))
 
 test_data = [{"image": image} for image in test_images]
 

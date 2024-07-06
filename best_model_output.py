@@ -17,18 +17,18 @@ if __name__ == '__main__':
             plt.figure("check", (18, 6))
             plt.subplot(1, 3, 1)
             plt.title(f"image {i}")
-            plt.imshow(val_data["image"][0, 0, :, :, 65].cpu(), cmap="gray")
+            #plt.imshow(val_data["image"][0, 0, :, :, 65].cpu(), cmap="gray")
             
             plt.subplot(1, 3, 2)
             plt.title(f"label {i}")
-            plt.imshow(val_data["label"][0, 0, :, :, 65].cpu(), cmap="nipy_spectral")
+            #plt.imshow(val_data["label"][0, 0, :, :, 65].cpu(), cmap="nipy_spectral")
             
             plt.subplot(1, 3, 3)
             plt.title(f"output {i}")
-            plt.imshow(val_outputs[0, :, :, 65],cmap="nipy_spectral")
+            #plt.imshow(val_outputs[0, :, :, 65],cmap="nipy_spectral")
             
             plt.savefig(f"best_model_output(combined_labels)_{i}.png")
-            plt.show()
+            #plt.show()
             
             # Limit the visualization to the first 3 sets of slices
             if i == 2:

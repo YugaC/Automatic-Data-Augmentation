@@ -43,7 +43,7 @@ def main():
                     ax.axis("off")
 
                 plt.suptitle(f"Best_Model_output {i}")
-                plt.show()
+                #plt.show()
 
                 # Print class distribution
                 class_distribution = get_class_distribution(predictions)

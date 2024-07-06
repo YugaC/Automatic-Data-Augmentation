@@ -37,8 +37,8 @@ def main():
             # Visualize the input image
             plt.figure(figsize=(6, 6))
             plt.title("Input Image")
-            plt.imshow(test_inputs[0, 0, :, :, 65].cpu().numpy(), cmap="gray")  # Visualize one slice
-            plt.show()
+            #plt.imshow(test_inputs[0, 0, :, :, 65].cpu().numpy(), cmap="gray")  # Visualize one slice
+            #plt.show()
 
             test_outputs = sliding_window_inference(test_inputs, roi_size, sw_batch_size, model)
             print("Shape of test_outputs after sliding_window_inference:", test_outputs.shape)
@@ -111,14 +111,14 @@ def main():
             plt.figure(figsize=(12, 6))
             plt.subplot(1, 2, 1)
             plt.title("Input Image")
-            plt.imshow(test_image[:, :, slice_index], cmap="gray")  # Adjust the slice index as needed
+            #plt.imshow(test_image[:, :, slice_index], cmap="gray")  # Adjust the slice index as needed
 
             plt.subplot(1, 2, 2)
             plt.title("Prediction")
-            plt.imshow(test_pred_class, cmap=cmap)  # Adjust the slice index as needed
+            #plt.imshow(test_pred_class, cmap=cmap)  # Adjust the slice index as needed
             plt.colorbar(ticks=range(16), label='Class Labels')  # Add colorbar with class labels
 
-            plt.show()
+            #plt.show()
         
             break  # Remove or modify this line to process more images
 

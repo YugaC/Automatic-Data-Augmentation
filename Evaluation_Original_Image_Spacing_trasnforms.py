@@ -45,9 +45,10 @@ def visualize_slice(data, slice_index, title, axis=2):
 
     plt.figure(figsize=(6, 6))
     plt.title(f"{title} - Slice {slice_index} along axis {axis}")
-    plt.imshow(slice_data.T, cmap="gray", origin="lower")
+    #plt.imshow(slice_data.T, cmap="gray", origin="lower")
     plt.colorbar()
-    plt.show()
+    #plt.show()
+    plt.savefig(os.path.join(root_dir, 'evaluation_fig.png'))
 
 # Define validation transforms
 val_org_transforms = Compose(
