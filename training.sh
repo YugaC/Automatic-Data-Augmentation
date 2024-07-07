@@ -17,24 +17,6 @@ module load cuda/11.2.0
 # Activate conda environment
 conda activate MasterThesis
 
+CONFIG = config.yaml
 # Run your training Python script
-python training.py
-if [ $? -eq 0 ]; then
-  echo "Training completed successfully."
-else
-  echo "Training failed."
-  exit 1
-fi
-
-# Run Validation file
-python Metric_original_image_spacing.py
-if [ $? -eq 0 ]; then
-  echo "Validation completed successfully."
-else
-  echo "Validation failed."
-  exit 1
-fi
-
-
-### there is no need to fiddle around with CUDA_VISIBLE_DEVICES! 
-pmemd.cuda -O -i mdin ...
+python3 training.py --config ${CONFIG}

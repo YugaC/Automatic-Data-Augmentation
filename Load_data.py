@@ -4,7 +4,7 @@ import nibabel as nib
 import config as cg
 
 def load_nii_info(file_path):
-    # Load the NIfTI file
+    # Load the NIfTI flile
     nii_image = nib.load(file_path)
     data = nii_image.get_fdata()
     shape = data.shape

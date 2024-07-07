@@ -1,10 +1,14 @@
-def get_config(key):
-    configs = {
-        "data_dir":'C:/Users/Yugashree/subset',
-        "max_epochs": '600',
-        "root_dir": 'C:/Users/Yugashree/Automatic-Data-Augmentation',
-        "val_interval": 2,
-        "data_dir_test": 'C:/Users/Yugashree/Downloads/subset/debugging',
+import yaml
 
-    }
-    return configs[key]
+def get_config(key):
+    with open("config.yaml", 'r') as file:
+        configs = yaml.safe_load(file)
+    return configs.get(key)
+
+# Example usage
+if __name__ == "__main__":
+    print(get_config("data_dir"))
+    print(get_config("max_epochs"))
+    print(get_config("root_dir"))
+    print(get_config("val_interval"))
+    print(get_config("data_dir_test"))

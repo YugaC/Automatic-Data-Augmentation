@@ -4,6 +4,16 @@ from transforms import *
 from Load_data import *
 from Train_and_validate_datasets_without_caching import *
 import config as cg
+import argparse
+
+# Argument parsing
+parser = argparse.ArgumentParser(description="Training script")
+parser.add_argument("--config", type=str, required=True, help="Path to the configuration file")
+args = parser.parse_args()
+
+# Load configuration
+cg.load_config(args.config)
+
 
 
 max_epochs = cg.get_config("max_epochs")
