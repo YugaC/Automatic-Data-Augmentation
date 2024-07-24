@@ -17,6 +17,8 @@ module load cuda/11.2.0
 # Activate conda environment
 conda activate MasterThesis
 
-CONFIG = config.yaml
+CONFIG=config.yaml
+
+cd 
 # Run your training Python script
 python3 training.py --config ${CONFIG}

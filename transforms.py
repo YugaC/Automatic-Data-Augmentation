@@ -15,7 +15,7 @@ train_transforms = Compose([
         clip=True
     ),
     Orientationd(keys=["image", "label"], axcodes="RAS"),
-    Spacingd(keys=["image", "label"], pixdim=(0.782, 0.782, 5.0), mode=("nearest")),    
+    #Spacingd(keys=["image", "label"], pixdim=(0.782, 0.782, 5.0), mode=("nearest")),      
     SpatialPadd(keys=["image", "label"], spatial_size=(128, 128, 80), method='end'),
     Resized(keys=["image", "label"], spatial_size=(128, 128, 80), mode='nearest'),  # Add Resize for image
     #ToTensor(),  # Convert both image and label to tensors
