@@ -5,6 +5,7 @@ from Load_data import *
 from Train_and_validate_datasets_without_caching import *
 import config as cg
 import argparse
+import plotly.graph_objects as go
 
 # Argument parsing
 parser = argparse.ArgumentParser(description="Training script")
@@ -17,11 +18,14 @@ cg.load_config(args.config)
 
 
 max_epochs = cg.get_config("max_epochs")
-val_interval = cg.get_config("val_inerval")
+val_interval = cg.get_config("val_interval")
 best_metric = -1
 best_metric_epoch = -1
 epoch_loss_values = []
 metric_values = []
+# Add lists to store values
+train_loss_values = []
+val_metric_values = []
 post_pred = Compose([AsDiscrete(argmax=True, to_onehot=16)])
 post_label = Compose([AsDiscrete(to_onehot=16)])
 
@@ -44,31 +48,17 @@ if __name__ == '__main__':
                 batch_data["image"].to(device),
                 batch_data["label"].to(device),
             )
-            def print_tensor_dimensions(tensor, description):
-                if isinstance(tensor, list):
-                    for idx, t in enumerate(tensor):
-                        print(f"{description}[{idx}] shape: {t.shape}")
-                else:
-                    print(f"{description} shape: {tensor.shape}")
-
-            # Print the shape of the input tensor
-            #print_tensor_dimensions(inputs, "Input tensor")
-
             optimizer.zero_grad()
             outputs = model(inputs)
-            #print_tensor_dimensions(outputs, "Output tensor after model forward pass")
-            
             loss = loss_function(outputs, labels)
             loss.backward()
             optimizer.step()
             epoch_loss += loss.item()
             print(f"{step}/{len(train_ds) // train_loader.batch_size}, train_loss: {loss.item():.4f}")
         
-        if step > 0:  # Check if any steps were executed
+        if step > 0:
             epoch_loss /= step
-            epoch_loss_values.append(epoch_loss)
-            #print("epochLossValues are:",epoch_loss_values)
-            #print(f"epoch {epoch + 1} average loss: {epoch_loss:.4f}")
+            train_loss_values.append(epoch_loss)
         else:
             print("No data processed in epoch.")
 
@@ -80,27 +70,19 @@ if __name__ == '__main__':
                         val_data["image"].to(device),
                         val_data["label"].to(device),
                     )
-                    #print_tensor_dimensions(val_inputs, "Validation input tensor")
                     
                     roi_size = (128, 128, 80)
                     sw_batch_size = 4
                     val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model)
                     val_outputs = [post_pred(i) for i in decollate_batch(val_outputs)]
                     val_labels = [post_label(i) for i in decollate_batch(val_labels)]
-                    #print_tensor_dimensions(val_outputs, "Validation outputs tensor")
-                    #print_tensor_dimensions(val_labels, "Validation labels tensor")
                     
-                    
-                    
-                    # compute metric for current iteration
                     dice_metric(y_pred=val_outputs, y=val_labels)
 
-                    # aggregate the final mean dice result
                     metric = dice_metric.aggregate().item()
-                    # reset the status for next validation round
                     dice_metric.reset()
 
-                    metric_values.append(metric)
+                    val_metric_values.append((epoch + 1, metric))
                     if metric > best_metric:
                         best_metric = metric
                         best_metric_epoch = epoch + 1
@@ -111,22 +93,57 @@ if __name__ == '__main__':
                         f"\nbest mean dice: {best_metric:.4f} "
                         f"at epoch: {best_metric_epoch}"
                     )
-                    
-    plt.figure("train", (12, 6))
-    plt.subplot(1, 2, 1)
-    plt.title("Epoch Average Loss")
-    x = [i + 1 for i in range(len(epoch_loss_values))]
-    y = epoch_loss_values
-    plt.xlabel("epoch")
-    plt.plot(x, y)
-    plt.subplot(1, 2, 2)
-    plt.title("Val Mean Dice")
-    x = [val_interval * (i + 1) for i in range(len(metric_values))]
-    y = metric_values
-    plt.xlabel("epoch")
-    plt.plot(x, y)
-               
-    
-    plt.savefig(os.path.join(root_dir, 'training_and_validation_metrics.png'))  # Specify the path if needed
+        else:
+            val_metric_values.append((epoch + 1, None))  # Append None if not a validation interval
 
-    print("Training and validation metrics saved as 'training_and_validation_metrics.png'")
+
+    # Training and Validation graph                
+    x_epochs = [i + 1 for i in range(max_epochs)]
+    y_train_loss = train_loss_values
+
+    # Separate epochs and metrics for plotting
+    x_val_epochs = [epoch for epoch, metric in val_metric_values if metric is not None]
+    y_val_metric = [metric for _, metric in val_metric_values if metric is not None]
+
+    fig = go.Figure()
+
+    # Add training loss curve (Orange)
+    fig.add_trace(go.Scatter(
+        x=x_epochs, y=y_train_loss, mode='lines', 
+        name='Training Loss', 
+        line=dict(color='orange', width=3)
+    ))
+    # Add validation metric curve (Blue)
+    fig.add_trace(go.Scatter(
+        x=x_val_epochs, y=y_val_metric, mode='lines', 
+        name='Validation Loss', 
+        line=dict(color='blue', width=3)
+    ))
+    # Update layout to ensure a clear and clean visualization
+    fig.update_layout(
+        title="Training Loss and Validation Metric",
+        xaxis_title="Epoch",
+        yaxis_title="Loss Value",
+        legend_title="Metrics",
+        hovermode="x unified",
+        font=dict(size=16),
+        plot_bgcolor='white',
+        xaxis=dict(
+            linecolor='black',
+            mirror=True,
+            showgrid=True,  # Adding grid lines for clarity
+            gridcolor='lightgray'
+        ),
+        yaxis=dict(
+            linecolor='black',
+            mirror=True,
+            showgrid=True,  # Adding grid lines for clarity
+            gridcolor='lightgray',
+            #tickformat=".2f"  # Format the y-axis to show 2 decimal places
+        )
+    )
+
+    
+
+    # Save the figure or display it
+    fig.write_image(os.path.join(root_dir, 'train_val_plot.png'))

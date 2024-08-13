@@ -1,126 +1,175 @@
+# Script 2: Loading Labels and Performing Inference
+
 from training import *
 from Inference_on_Testset import *
-from monai.transforms import LoadImage
+from monai.transforms import LoadImage, EnsureType, Compose, Invertd, ToTensord
+from monai.data import Dataset, DataLoader, decollate_batch
 import numpy as np
-from matplotlib.colors import ListedColormap
 from collections import Counter
-import matplotlib.pyplot as plt
 import torch.nn.functional as F
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd  # Ensure pandas is imported
+import torch
+import gc
+import argparse
+import yaml
+import config as cg
+from plotly.subplots import make_subplots
+import os
 
-def get_class_distribution(predictions):
+def dice_coefficient(pred, label, smooth=1e-5):
+    pred = pred.float()
+    label = label.float()
+    intersection = (pred * label).sum()
+    dice = (2. * intersection + smooth) / (pred.sum() + label.sum() + smooth)
+    return dice
+
+def get_class_distribution(loader):
     class_counts = Counter()
-    flat_predictions = predictions.flatten()
-    class_counts.update(flat_predictions)
+    for data in loader:
+        labels = data["label"].numpy()
+        flat_labels = labels.flatten()
+        class_counts.update(flat_labels)
     return class_counts
+
+def ensure_dimensions(pred, label, desired_size=(128, 128, 80)):
+    def adjust_tensor(tensor, target_dims):
+        current_dims = tensor.shape[-3:]
+        pad_widths = []
+        crop_slices = []
+
+        for i, (current, target) in enumerate(zip(current_dims, target_dims)):
+            if current < target:
+                total_pad = target - current
+                pad_widths.append((total_pad // 2, total_pad - total_pad // 2))
+                crop_slices.append(slice(None))
+            elif current > target:
+                total_crop = current - target
+                start_crop = total_crop // 2
+                end_crop = current - total_crop // 2
+                pad_widths.append((0, 0))
+                crop_slices.append(slice(start_crop, end_crop))
+            else:
+                pad_widths.append((0, 0))
+                crop_slices.append(slice(None))
+
+        if any(width for pair in pad_widths for width in pair):
+            tensor = torch.nn.functional.pad(tensor, [item for sublist in reversed(pad_widths) for item in sublist])
+
+        tensor = tensor[..., crop_slices[0], crop_slices[1], crop_slices[2]]
+        return tensor
+
+    pred_adjusted = adjust_tensor(pred, desired_size)
+    label_adjusted = adjust_tensor(label, desired_size)
+    return pred_adjusted, label_adjusted
+
+# Argument parsing for config file
+parser = argparse.ArgumentParser(description="Testing script")
+parser.add_argument("--config", type=str, required=True, help="Path to the configuration file")
+args = parser.parse_args()
+
+config = cg.load_config(args.config)
+
+data_dir_test = config['data_dir_test']
+output_test_image_folder = os.path.join(data_dir_test, "processed_test_images")
+output_test_label_folder = os.path.join(data_dir_test, "processed_test_labels")
+
+# Assuming the rest of the script uses the loaded config appropriately
 
 def main():
     loader = LoadImage()
-    model.load_state_dict(torch.load(os.path.join(root_dir, "best_metric_model.pth")))
+    model.load_state_dict(torch.load(os.path.join(config['root_dir'], "best_metric_model.pth")))
     model.eval()
-    
-    # Define a specific color map for the 16 labels
+
+    # Define a specific color map for the 16 labels (converted to RGB format for Plotly)
     colors = [
-        (0, 0, 0), (0.121, 0.466, 0.705), (1, 0.498, 0.054), (0.172, 0.627, 0.172), 
-        (0.839, 0.153, 0.157), (0.580, 0.403, 0.741), (0.549, 0.337, 0.294), 
-        (0.890, 0.466, 0.760), (0.498, 0.498, 0.498), (0.737, 0.741, 0.133), 
-        (0.090, 0.745, 0.812), (1, 0.600, 0), (0.692, 0.349, 0.157), 
-        (0.5, 0.5, 0), (0.6, 0.6, 0.6), (0.8, 0.6, 0.4)
+        "rgb(0, 0, 0)", "rgb(31, 119, 180)", "rgb(255, 127, 14)", "rgb(44, 160, 44)", 
+        "rgb(214, 39, 40)", "rgb(148, 103, 189)", "rgb(140, 86, 75)", 
+        "rgb(227, 119, 194)", "rgb(127, 127, 127)", "rgb(188, 189, 34)", 
+        "rgb(23, 190, 207)", "rgb(255, 152, 0)", "rgb(176, 87, 40)", 
+        "rgb(128, 128, 0)", "rgb(153, 153, 153)", "rgb(204, 153, 102)"
     ]
-    cmap = ListedColormap(colors)
-    
+
     with torch.no_grad():
+        dice_scores = []
         for test_data in test_org_loader:
             test_inputs = test_data["image"].to(device)
+            test_labels = test_data["label"].to(device)
+            
             roi_size = (128, 128, 80)
             sw_batch_size = 1
-            
-            # Visualize the input image
-            plt.figure(figsize=(6, 6))
-            plt.title("Input Image")
-            #plt.imshow(test_inputs[0, 0, :, :, 65].cpu().numpy(), cmap="gray")  # Visualize one slice
-            #plt.show()
 
             test_outputs = sliding_window_inference(test_inputs, roi_size, sw_batch_size, model)
-            print("Shape of test_outputs after sliding_window_inference:", test_outputs.shape)
-            print(f"Model output unique values before argmax: {torch.unique(test_outputs)}")
-                
-            # Apply argmax to get the predicted class for each voxel
             test_outputs = torch.argmax(test_outputs, dim=1).detach().cpu()
-            
-            print("Shape of test_outputs after argmax:", test_outputs.shape)
-            print(f"Model output unique values after argmax: {torch.unique(test_outputs)}")
-                
-            
-            # Convert to dictionary format with "pred" key
-            #test_outputs_dict = {"pred": test_outputs}
-            #print("Shape of test_outputs_dict['pred'] before post_transforms:", test_outputs_dict["pred"].shape)
-
-            # Apply post transforms
-            #test_outputs_dict = post_transforms(test_outputs_dict)
-            #print("Shape of test_outputs_dict['pred'] after post_transforms:", test_outputs_dict["pred"].shape)
-
-            # Extract tensor data from dictionary
-            #test_outputs_tensor = test_outputs_dict["pred"]
-            #print("Shape of test_outputs_tensor after squeezing:", test_outputs_tensor.shape)
-            
-            # Print raw model predictions
-            #raw_pred = test_outputs_tensor.numpy()
-            #print(f"Raw model predictions: min={raw_pred.min()}, max={raw_pred.max()}, mean={raw_pred.mean()}")
 
             test_data_list = decollate_batch(test_data)
             for idx, data in enumerate(test_data_list):
-                data["pred"] = test_outputs[idx:idx+1]  # Ensure batch dimension
+                data["pred"] = test_outputs[idx:idx+1]
                 test_data_list[idx] = post_transforms(data)
-            test_outputs = from_engine(["pred"])(test_data_list)    
-                
-                #print(f"Shape of data['pred'] for batch index {idx}:", data["pred"].shape)
-                # Handle missing 'image_meta_dict' key
-                #if "image_meta_dict" in data:
-                    #data["pred_meta_dict"] = data["image_meta_dict"]
-                #else:
-                    #data["pred_meta_dict"] = {"affine": np.eye(4)}  # Create a default affine if not present
-
             
-            
-             # Extract tensors from list for visualization
-            test_outputs_tensor = test_outputs[0]
-            
-            
-             # Print unique values in val_outputs_tensor for debugging
-            print(f"Unique values in test_outputs_tensor: {torch.unique(test_outputs_tensor)}")
-        
-            # Extract predictions from the list
-            test_outputs_list = [d["pred"] for d in test_data_list]
-            # Visualize the input image and prediction
-            test_image = test_data_list[0]["image"][0, :, :, :].cpu().numpy()  # Accessing from the first item in the list
-            test_pred = test_outputs_list[0][0, :, :, :].cpu().numpy()    # Accessing from the first item in the list
-            print("Shape of test_image:", test_image.shape)
-            print("Shape of test_pred:", test_pred.shape)
+            test_outputs, test_labels = from_engine(["pred", "label"])(test_data_list)
 
-            # Extract the specific slice for visualization
-            slice_index = 65  # Adjust the slice index as needed
-            test_pred_class = test_pred[:, :, slice_index]  # Remove the extra dimension
-            print("Shape of test_pred_class slice:", test_pred_class.shape)
+            for i in range(len(test_outputs)):
+                test_outputs[i], test_labels[i] = ensure_dimensions(test_outputs[i], test_labels[i])
 
-        
-            # Calculate class distribution in test predictions
-            test_class_distribution = get_class_distribution(test_pred_class)
-            print("Class Distribution in Test Predictions:", test_class_distribution)
+            test_outputs = torch.stack(test_outputs).to(device)
+            test_labels = torch.stack(test_labels).to(device)
 
-            # Plot the input image and prediction
-            plt.figure(figsize=(12, 6))
-            plt.subplot(1, 2, 1)
-            plt.title("Input Image")
-            #plt.imshow(test_image[:, :, slice_index], cmap="gray")  # Adjust the slice index as needed
+            num_classes = 16
+            class_dice_scores = []
+            for class_idx in range(num_classes):
+                pred_class = (test_outputs == class_idx).float()
+                label_class = (test_labels == class_idx).float()
+                dice_score = dice_coefficient(pred_class, label_class)
+                class_dice_scores.append(dice_score.item())
 
-            plt.subplot(1, 2, 2)
-            plt.title("Prediction")
-            #plt.imshow(test_pred_class, cmap=cmap)  # Adjust the slice index as needed
-            plt.colorbar(ticks=range(16), label='Class Labels')  # Add colorbar with class labels
+            avg_dice_score = sum(class_dice_scores) / num_classes
+            dice_scores.append(avg_dice_score)
 
-            #plt.show()
-        
-            break  # Remove or modify this line to process more images
+            # Visualization of the first batch using Plotly
+            if len(dice_scores) == 1:
+                test_image = test_data_list[0]["image"][0, :, :, :].cpu().numpy()
+                test_pred = test_outputs[0].cpu().numpy()
+
+                slice_index = 65  # Adjust the slice index as needed
+                test_pred_class = test_pred[:, :, slice_index]
+
+                # Create a subplot with two images (input and prediction)
+                fig = make_subplots(rows=1, cols=2, subplot_titles=("Input Image", "Test Prediction"))
+
+                # Input image plot
+                fig.add_trace(go.Heatmap(
+                    z=test_image[:, :, slice_index],
+                    colorscale='gray',
+                    showscale=False
+                ), row=1, col=1)
+
+                # Prediction plot with class labels
+                fig.add_trace(go.Heatmap(
+                    z=test_pred_class,
+                    colorscale=colors,
+                    showscale=True,
+                    colorbar=dict(tickvals=list(range(16)), title="Class Labels")
+                ), row=1, col=2)
+
+                # Update layout
+                fig.update_layout(title_text="Input Image and Prediction", height=600, width=1200)
+
+                # Save the plot as an image file
+                output_image_path = os.path.join(root_dir, 'test_prediction.png')
+                fig.write_image(output_image_path)
+                print(f"Saved prediction image at {output_image_path}")
+
+            del test_inputs, test_data_list, test_outputs, test_labels
+            torch.cuda.empty_cache()
+            gc.collect()
+
+        metric_test = sum(dice_scores) / len(dice_scores)
+        print("Metric on test image spacing: ", metric_test)
+
+        test_class_distribution = get_class_distribution(test_org_loader)
+        print("Class Distribution in Test Dataset:", test_class_distribution)
 
 if __name__ == '__main__':
     main()

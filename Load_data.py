@@ -5,6 +5,9 @@ import nibabel as nib
 from scipy.ndimage import zoom
 import config as cg
 
+cg.load_config("/home/woody/iwi5/iwi5210h/Automatic-Data-Augmentation/config.yaml")
+
+
 def load_image(image_path):
     image = nib.load(image_path)
     image_data = image.get_fdata()
@@ -17,7 +20,7 @@ def resample_image(image_data, original_pixdim, target_shape):
     # Calculate the zoom factors for each dimension
     zoom_factors = [target_dim / original_dim for original_dim, target_dim in zip(image_data.shape, target_shape)]
     # Use zoom to resize the image
-    resampled_image = zoom(image_data, zoom_factors, order=1)
+    resampled_image = zoom(image_data, zoom_factors, order=0)
     # Calculate the new pixel dimensions
     new_pixdim = original_pixdim / zoom_factors
     return resampled_image, new_pixdim

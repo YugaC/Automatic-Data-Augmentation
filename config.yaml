@@ -1,5 +1,5 @@
 data_dir: 'C:/Users/Yugashree/Downloads/Newsubset/subset'
-max_epochs: 600
+max_epochs: 750
 root_dir: 'C:/Users/Yugashree/Automatic-Data-Augmentation'
 val_interval: 2
-data_dir_test: 'C:/Users/Yugashree/Downloads/subset/debugging'
+data_dir_test: 'C:/Users/Yugashree/Downloads/Newsubset/subset/extra'
