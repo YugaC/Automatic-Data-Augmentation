@@ -1,4 +1,4 @@
-import Load_data
+# import Load_data
 from imports import *
 
 
@@ -9,7 +9,7 @@ train_transforms = Compose([
     ScaleIntensityRanged(
         keys=["image"],
         a_min=-1000,
-        a_max=1000,
+        a_max=1500,
         b_min=0.0,
         b_max=1.0,
         clip=True
@@ -28,13 +28,13 @@ val_transforms = Compose([
     ScaleIntensityRanged(
         keys=["image"],
         a_min=-1000,
-        a_max=1000,
+        a_max=1500,
         b_min=0.0,
         b_max=1.0,
         clip=True
     ),
     Orientationd(keys=["image", "label"], axcodes="RAS"),
-    Spacingd(keys=["image", "label"], pixdim=(0.782, 0.782, 5.0), mode=("nearest")),    
+    # Spacingd(keys=["image", "label"], pixdim=(0.782, 0.782, 5.0), mode=("nearest")),    
     SpatialPadd(keys=["image", "label"], spatial_size=(128, 128, 80), method='end'),
     Resized(keys=["image", "label"], spatial_size=(128, 128, 80), mode='nearest'),  # Add Resize for image
     #ToTensor(),

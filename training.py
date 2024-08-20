@@ -15,8 +15,6 @@ args = parser.parse_args()
 # Load configuration
 cg.load_config(args.config)
 
-
-
 max_epochs = cg.get_config("max_epochs")
 val_interval = cg.get_config("val_interval")
 best_metric = -1
@@ -35,7 +33,9 @@ if not os.path.exists(root_dir):
     os.makedirs(root_dir)
 
 if __name__ == '__main__':
+
     print(f"Starting training with {len(train_loader)} batches per epoch.")
+
     for epoch in range(max_epochs):
         print("-" * 10)
         print(f"epoch {epoch + 1}/{max_epochs}")
@@ -79,20 +79,24 @@ if __name__ == '__main__':
                     
                     dice_metric(y_pred=val_outputs, y=val_labels)
 
-                    metric = dice_metric.aggregate().item()
-                    dice_metric.reset()
+                metric = dice_metric.aggregate().cpu().numpy()
+                metric_organ = np.mean(metric, axis=0)
+                metric = np.mean(metric)
+                # print(metric)
 
-                    val_metric_values.append((epoch + 1, metric))
-                    if metric > best_metric:
-                        best_metric = metric
-                        best_metric_epoch = epoch + 1
-                        torch.save(model.state_dict(), os.path.join(root_dir, "best_metric_model.pth"))
-                        print("saved new best metric model")
-                    print(
-                        f"current epoch: {epoch + 1} current mean dice: {metric:.4f}"
-                        f"\nbest mean dice: {best_metric:.4f} "
-                        f"at epoch: {best_metric_epoch}"
+                val_metric_values.append((epoch + 1, metric))
+                if metric > best_metric:
+                    best_metric = metric
+                    best_metric_epoch = epoch + 1
+                    torch.save(model.state_dict(), os.path.join(root_dir, "best_metric_model.pth"))
+                    print('organ dice: ', [str(i)[:4] for i in metric_organ])
+                    print("saved new best metric model")
+                print(
+                    f"current epoch: {epoch + 1} current mean dice: {metric:.4f}"
+                    f"\nbest mean dice: {best_metric:.4f} "
+                    f"at epoch: {best_metric_epoch}"
                     )
+                dice_metric.reset()
         else:
             val_metric_values.append((epoch + 1, None))  # Append None if not a validation interval
 

@@ -1,5 +1,11 @@
-data_dir: 'C:/Users/Yugashree/Downloads/Newsubset/subset'
-max_epochs: 750
-root_dir: 'C:/Users/Yugashree/Automatic-Data-Augmentation'
+# data_dir: 'C:/Users/Yugashree/Downloads/Newsubset/subset'
+# max_epochs: 750
+# root_dir: 'C:/Users/Yugashree/Automatic-Data-Augmentation'
+# val_interval: 2
+# data_dir_test: 'C:/Users/Yugashree/Downloads/Newsubset/subset/extra'
+
+data_dir: 'D:\Chang\stud\yugashree'
+max_epochs: 300
+root_dir: 'D:\Chang\stud\yugashree\Automatic-Data-Augmentation'
 val_interval: 2
-data_dir_test: 'C:/Users/Yugashree/Downloads/Newsubset/subset/extra'
+data_dir_test: 'D:\Chang\stud\yugashree'

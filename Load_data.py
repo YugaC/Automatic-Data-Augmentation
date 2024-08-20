@@ -5,7 +5,7 @@ import nibabel as nib
 from scipy.ndimage import zoom
 import config as cg
 
-cg.load_config("/home/woody/iwi5/iwi5210h/Automatic-Data-Augmentation/config.yaml")
+cg.load_config("config.yaml")
 
 
 def load_image(image_path):
@@ -67,8 +67,9 @@ def process_files(folder, output_folder, collect_pixel_dims=False):
             save_image(resampled_image, header, affine, output_path)
 
 # Process images and labels
-process_files(image_folder, output_image_folder, collect_pixel_dims=True)
-process_files(label_folder, output_label_folder, collect_pixel_dims=True)
+# Uncomment here when process_files are needed.
+# process_files(image_folder, output_image_folder, collect_pixel_dims=True)
+# process_files(label_folder, output_label_folder, collect_pixel_dims=True)
 
 # Step 2: Calculate the median pixel dimensions
 all_pixel_dims = np.array(all_pixel_dims)
@@ -90,12 +91,13 @@ def finalize_files(folder, output_folder, new_pixdim):
             print(f"Processed {file_name}: Shape {image_data.shape}, Pixel Dimensions {new_pixdim}")
 
 # Apply the median pixel dimensions to all processed files
-finalize_files(output_image_folder, output_image_folder, median_pixdim)
-finalize_files(output_label_folder, output_label_folder, median_pixdim)
+# finalize_files(output_image_folder, output_image_folder, median_pixdim)
+# finalize_files(output_label_folder, output_label_folder, median_pixdim)
 
 print("Preprocessing complete.")
 
 # Collect file paths for processed images and labels
+print(output_image_folder)
 processed_images = sorted(glob.glob(os.path.join(output_image_folder, "*.nii")))
 processed_labels = sorted(glob.glob(os.path.join(output_label_folder, "*.nii")))
 
