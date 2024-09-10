@@ -4,8 +4,9 @@ import numpy as np
 import nibabel as nib
 from scipy.ndimage import zoom
 import config as cg
+from sklearn.model_selection import KFold
 
-cg.load_config("/home/woody/iwi5/iwi5210h/Automatic-Data-Augmentation/config.yaml")
+cg.load_config("config.yaml")
 
 
 def load_image(image_path):
@@ -67,8 +68,9 @@ def process_files(folder, output_folder, collect_pixel_dims=False):
             save_image(resampled_image, header, affine, output_path)
 
 # Process images and labels
-process_files(image_folder, output_image_folder, collect_pixel_dims=True)
-process_files(label_folder, output_label_folder, collect_pixel_dims=True)
+# Uncomment here when process_files are needed.
+# process_files(image_folder, output_image_folder, collect_pixel_dims=True)
+# process_files(label_folder, output_label_folder, collect_pixel_dims=True)
 
 # Step 2: Calculate the median pixel dimensions
 all_pixel_dims = np.array(all_pixel_dims)
@@ -90,12 +92,13 @@ def finalize_files(folder, output_folder, new_pixdim):
             print(f"Processed {file_name}: Shape {image_data.shape}, Pixel Dimensions {new_pixdim}")
 
 # Apply the median pixel dimensions to all processed files
-finalize_files(output_image_folder, output_image_folder, median_pixdim)
-finalize_files(output_label_folder, output_label_folder, median_pixdim)
+# finalize_files(output_image_folder, output_image_folder, median_pixdim)
+# finalize_files(output_label_folder, output_label_folder, median_pixdim)
 
 print("Preprocessing complete.")
 
 # Collect file paths for processed images and labels
+print(output_image_folder)
 processed_images = sorted(glob.glob(os.path.join(output_image_folder, "*.nii")))
 processed_labels = sorted(glob.glob(os.path.join(output_label_folder, "*.nii")))
 
@@ -116,13 +119,35 @@ else:
     data_dicts = [{"image": img, "label": lbl} for img, lbl in zip(processed_images, processed_labels)]
 
     # Calculate split index for an 80/20 ratio
-    split_index = int(len(data_dicts) * 0.8)
+    #split_index = int(len(data_dicts) * 0.8)
 
     # Split data into training and validation sets
-    train_files = data_dicts[:split_index]
-    val_files = data_dicts[split_index:]
+    #train_files = data_dicts[:split_index]
+    #val_files = data_dicts[split_index:]
 
-    print(f"Training files: {len(train_files)}, Validation files: {len(val_files)}")
+    # KFold Cross-validation setup
+    n_splits = 4
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+
+    # Loop over each fold
+    fold_index = 1
+    for train_index, val_index in kf.split(data_dicts):
+        print(f"Processing Fold {fold_index}/{n_splits}")
+
+        # Split data into training and validation sets for the current fold
+        train_files = [data_dicts[i] for i in train_index]
+        val_files = [data_dicts[i] for i in val_index]
+
+        print(f"Training files for Fold {fold_index}: {len(train_files)}")
+        print(f"Validation files for Fold {fold_index}: {len(val_files)}")
+
+        # You can now use `train_files` and `val_files` in your training loop
+        # Here you would typically save the splits for each fold, or directly train with them.
+
+        fold_index += 1
+
+
+    #print(f"Training files: {len(train_files)}, Validation files: {len(val_files)}")
 
 # Use the same data for training and validation since only one pair exists
 # train_files = data_dicts

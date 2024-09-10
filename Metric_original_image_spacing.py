@@ -1,14 +1,18 @@
 import os
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
-from Evaluation_Original_Image_Spacing_trasnforms import *
 import gc
 import torch
-import matplotlib.pyplot as plt
-from monai.transforms import EnsureType, AsDiscrete, Compose, Invertd, ToTensord
-from collections import Counter
 import numpy as np
+from Model import *
+from training import *
+from Evaluation_Original_Image_Spacing_trasnforms import *
+import plotly.graph_objects as go
+from collections import Counter
+from monai.transforms import EnsureType, AsDiscrete, Compose, Invertd, ToTensord
 
-# Function to get class distribution
+# Ensure KMP compatibility
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
+# Function to calculate class distribution
 def get_class_distribution(loader):
     class_counts = Counter()
     for data in loader:
@@ -17,25 +21,7 @@ def get_class_distribution(loader):
         class_counts.update(flat_labels)
     return class_counts
 
-def visualize_predictions(inputs, labels, predictions, slice_idx=65):
-    plt.figure(figsize=(18, 6))
-
-    plt.subplot(1, 3, 1)
-    plt.title("Image Slice")
-    #plt.imshow(inputs[0, 0, :, :, slice_idx].cpu(), cmap="gray")
-
-    plt.subplot(1, 3, 2)
-    plt.title("Label Slice")
-    #plt.imshow(labels[0, :, :, slice_idx].cpu().squeeze(), cmap="nipy_spectral")
-
-    plt.subplot(1, 3, 3)
-    plt.title("Prediction Slice")
-    #plt.imshow(predictions[0, :, :, slice_idx].cpu().squeeze(), cmap="nipy_spectral")
-
-    #plt.show()
-
-
-
+# Ensure that tensors have the desired dimensions
 def ensure_dimensions(pred, label, desired_size=(128, 128, 80)):
     def adjust_tensor(tensor, target_dims):
         current_dims = tensor.shape[-3:]
@@ -67,6 +53,7 @@ def ensure_dimensions(pred, label, desired_size=(128, 128, 80)):
     label_adjusted = adjust_tensor(label, desired_size)
     return pred_adjusted, label_adjusted
 
+# Calculate the Dice coefficient
 def dice_coefficient(pred, label, smooth=1e-5):
     pred = pred.float()
     label = label.float()
@@ -74,91 +61,149 @@ def dice_coefficient(pred, label, smooth=1e-5):
     dice = (2. * intersection + smooth) / (pred.sum() + label.sum() + smooth)
     return dice
 
-# Initialize the model and DiceMetric
-model.load_state_dict(torch.load(os.path.join(root_dir, "best_metric_model.pth")))
-model.eval()
+# KFold Cross-validation setup
+n_splits = 4
+kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
 
-with torch.no_grad():
-    dice_scores = []
-    for val_data in val_org_loader:
-        val_inputs = val_data["image"].to(device)
-        roi_size = (128, 128, 80)
-        sw_batch_size = 1
-        val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model)
-        
-        # Print model output before argmax
-        print(f"Model output shape: {val_outputs.shape}")
-        print(f"Model output unique values before argmax: {torch.unique(val_outputs)}")
-        
-        # Visualize raw outputs for debugging
-        raw_output_slice = val_outputs[0, :, :, :, 65].cpu().numpy()
-        plt.figure(figsize=(10, 5))
-        plt.title("Raw Output Slice (Before Argmax)")
-        #plt.imshow(np.max(raw_output_slice, axis=0), cmap="viridis")
-        plt.colorbar()
-        #plt.show()
+# Initialize metrics for cross-validation
+val_dice_scores = []
 
-        # Apply argmax to the predictions to get the most likely class for each pixel
-        val_outputs = torch.argmax(val_outputs, dim=1).detach().cpu()
-        
-        # Print model output after argmax
-        print(f"Model output shape after argmax: {val_outputs.shape}")
-        print(f"Model output unique values after argmax: {torch.unique(val_outputs)}")
-        
+# Initialize the cross-validation loop
+fold_index = 1
+for train_idx, val_idx in kf.split(train_loader.dataset):  # Assuming the dataset is accessible
+    print(f"Processing fold {fold_index}/{n_splits}")
 
 
-        # Ensure predictions and labels are tensors
-        val_data_list = decollate_batch(val_data)
-        for idx, data in enumerate(val_data_list):
-            data["pred"] = val_outputs[idx:idx+1]  # Ensure batch dimension
-            val_data_list[idx] = post_transforms(data)
 
-        val_outputs, val_labels = from_engine(["pred", "label"])(val_data_list)
-        
-         # Extract tensors from list for visualization
-        val_outputs_tensor = val_outputs[0]
-        val_labels_tensor = val_labels[0]
-        
-        # Print unique values in val_outputs_tensor for debugging
-        print(f"Unique values in val_outputs_tensor: {torch.unique(val_outputs_tensor)}")
+    # Initialize the model and load weights
+    model.load_state_dict(torch.load(os.path.join(root_dir, f"best_metric_model_fold_{fold_index}.pth")))
+    model.eval()
 
-        # Visualize predictions
-        visualize_predictions(val_inputs.cpu(), val_labels_tensor, val_outputs_tensor)
+    # Store cumulative Dice scores for each class across all images
+    cumulative_class_dice_scores = [0.0] * 16
+    image_count = 0  # Keep track of the number of validation images
+    val_dice_scores = []  # Store Dice scores for each validation epoch
+
+    with torch.no_grad():
+        all_class_dice_scores = [[] for _ in range(16)]  # Store Dice scores for each class across all images
+        individual_image_dice_scores = []  # Store Dice scores for individual images
+
+        for val_data in val_org_loader:
+            val_inputs = val_data["image"].to(device)
+            roi_size = (128, 128, 80)
+            sw_batch_size = 1
+            val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model)
+
+            # Print model output before argmax
+            print(f"Model output shape: {val_outputs.shape}")
+            print(f"Model output unique values before argmax: {torch.unique(val_outputs)}")
+
+            val_outputs = torch.argmax(val_outputs, dim=1).detach().cpu()
+
+            # Print model output after argmax
+            print(f"Model output shape after argmax: {val_outputs.shape}")
+            print(f"Model output unique values after argmax: {torch.unique(val_outputs)}")
 
 
-        # Ensure dimensions match before computing the metric
-        for i in range(len(val_outputs)):
-            val_outputs[i], val_labels[i] = ensure_dimensions(val_outputs[i], val_labels[i])
-            print(f"Shape of val_outputs[{i}]: {val_outputs[i].shape}")
-            print(f"Shape of val_labels[{i}]: {val_labels[i].shape}")
-            print(f"Unique values in val_outputs[{i}]: ", torch.unique(val_outputs[i]))
-            print(f"Unique values in val_labels[{i}]: ", torch.unique(val_labels[i]))
+            val_data_list = decollate_batch(val_data)
+            for idx, data in enumerate(val_data_list):
+                data["pred"] = val_outputs[idx:idx+1]  # Ensure batch dimension
+                val_data_list[idx] = post_transforms(data)
 
-        # Stack and move to GPU
-        val_outputs = torch.stack(val_outputs).to(device)
-        val_labels = torch.stack(val_labels).to(device)
 
-        # Compute Dice score for each class separately
-        num_classes = 16
-        class_dice_scores = []
+            val_outputs, val_labels = from_engine(["pred", "label"])(val_data_list)
+
+            # Extract tensors from list for visualization
+            val_outputs_tensor = val_outputs[0]
+            val_labels_tensor = val_labels[0]
+
+            # Print unique values in val_outputs_tensor for debugging
+            print(f"Unique values in val_outputs_tensor: {torch.unique(val_outputs_tensor)}")
+
+
+
+            for i in range(len(val_outputs)):
+                val_outputs[i], val_labels[i] = ensure_dimensions(val_outputs[i], val_labels[i])
+                print(f"Shape of val_outputs[{i}]: {val_outputs[i].shape}")
+                print(f"Shape of val_labels[{i}]: {val_labels[i].shape}")
+                print(f"Unique values in val_outputs[{i}]: ", torch.unique(val_outputs[i]))
+                print(f"Unique values in val_labels[{i}]: ", torch.unique(val_labels[i]))
+
+            # Stack and move to GPU
+            val_outputs = torch.stack(val_outputs).to(device)
+            val_labels = torch.stack(val_labels).to(device)
+
+            # Compute Dice score for each class separately
+
+            num_classes = 16
+            class_dice_scores = []
+            for class_idx in range(num_classes):
+                pred_class = (val_outputs == class_idx).float()
+                label_class = (val_labels == class_idx).float()
+                dice_score = dice_coefficient(pred_class, label_class)
+                class_dice_scores.append(dice_score.item())
+                all_class_dice_scores[class_idx].append(dice_score.item())
+
+            avg_dice_score = sum(class_dice_scores) / num_classes
+            individual_image_dice_scores.append(avg_dice_score)
+            val_dice_scores.append(avg_dice_score)
+
+            # Print Dice scores for the current image
+            print(f"Dice scores for validation image {idx+1}:")
+            for class_idx in range(num_classes):
+                print(f" - Class {class_idx}: {class_dice_scores[class_idx]}")
+
+            del val_inputs, val_data_list, val_outputs, val_labels
+            torch.cuda.empty_cache()
+            gc.collect()
+
+        # Compute and print the average Dice score for each class across all validation images
+        print("\nAverage Dice score per class across all validation images:")
         for class_idx in range(num_classes):
-            pred_class = (val_outputs == class_idx).float()
-            label_class = (val_labels == class_idx).float()
-            dice_score = dice_coefficient(pred_class, label_class)
-            class_dice_scores.append(dice_score.item())
-            print(f"Dice score for class {class_idx}: {dice_score.item()}")
+            average_class_dice = sum(all_class_dice_scores[class_idx]) / len(all_class_dice_scores[class_idx])
+            print(f" - Class {class_idx}: {average_class_dice}")
 
-        avg_dice_score = sum(class_dice_scores) / num_classes
-        dice_scores.append(avg_dice_score)
+        # Print the overall average Dice score across all validation images
+        metric_org = sum(individual_image_dice_scores) / len(individual_image_dice_scores)
+        print("\nOverall average Dice score across all validation images for fold {fold_index}:", metric_org)
 
-        # Clear memory after processing each batch
-        del val_inputs, val_data_list, val_outputs, val_labels
-        torch.cuda.empty_cache()
-        gc.collect()
+    # Plot the Validation Dice Scores
+    fig = go.Figure()
 
-metric_org = sum(dice_scores) / len(dice_scores)
-print("Metric on original image spacing: ", metric_org)
+    # Assuming val_dice_scores contains the Dice score for each validation image
+    fig.add_trace(go.Scatter(
+        x=list(range(1, len(val_dice_scores) + 1)), 
+        y=val_dice_scores, 
+        mode='lines+markers', 
+        name='Validation Dice Scores', 
+        line=dict(color='blue', width=3)
+    ))
 
-# Print class distribution in validation dataset
-val_class_distribution = get_class_distribution(val_org_loader)
-print("Class Distribution in Validation Dataset:", val_class_distribution)
+    # Update layout
+    fig.update_layout(
+        title="Validation Dice Scores Across Images",
+        xaxis_title="Validation Image Index",
+        yaxis_title="Dice Score",
+        legend_title="Metrics",
+        hovermode="x unified",
+        font=dict(size=16),
+        plot_bgcolor='white',
+        xaxis=dict(
+            linecolor='black',
+            mirror=True,
+            showgrid=True,
+            gridcolor='lightgray'
+        ),
+        yaxis=dict(
+            linecolor='black',
+            mirror=True,
+            showgrid=True,
+            gridcolor='lightgray',
+        )
+    )
+
+    # Save the plot
+    fig.write_image(os.path.join(root_dir, f'validation_dice_plot_fold_{fold_index}.png'))
+
+    # Increment fold index
+    fold_index += 1
