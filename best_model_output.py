@@ -1,7 +1,10 @@
-from imports import *
-from training import *
+import plotly.graph_objects as go
+import plotly.subplots as psub
+import os
 
-# comparison between the original image, the label, and the model's output prediction for each slice in validation data.
+# Assuming `root_dir`, `device`, `val_loader`, and `model` are already defined and set up
+
+# Comparison between the original image, the label, and the model's output prediction for each slice in validation data.
 if __name__ == '__main__':
     model.load_state_dict(torch.load(os.path.join(root_dir, "best_metric_model.pth")))
     model.eval()
@@ -13,22 +16,39 @@ if __name__ == '__main__':
             val_outputs = sliding_window_inference(val_data["image"].to(device), roi_size, sw_batch_size, model)
             val_outputs = torch.argmax(val_outputs, dim=1).detach().cpu()
             
-            # Plot the slice [:, :, 65]
-            plt.figure("check", (18, 6))
-            plt.subplot(1, 3, 1)
-            plt.title(f"image {i}")
-            #plt.imshow(val_data["image"][0, 0, :, :, 65].cpu(), cmap="gray")
-            
-            plt.subplot(1, 3, 2)
-            plt.title(f"label {i}")
-            #plt.imshow(val_data["label"][0, 0, :, :, 65].cpu(), cmap="nipy_spectral")
-            
-            plt.subplot(1, 3, 3)
-            plt.title(f"output {i}")
-            #plt.imshow(val_outputs[0, :, :, 65],cmap="nipy_spectral")
-            
-            plt.savefig(f"best_model_output(combined_labels)_{i}.png")
-            #plt.show()
+            # Create a subplot with 3 columns
+            fig = psub.make_subplots(rows=1, cols=3, subplot_titles=(f"Image {i}", f"Label {i}", f"Output {i}"))
+
+            # Original image
+            fig.add_trace(go.Heatmap(
+                z=val_data["image"][0, 0, :, :, 65].cpu().numpy(),
+                colorscale='gray',
+                showscale=False
+            ), row=1, col=1)
+
+            # Ground truth label
+            fig.add_trace(go.Heatmap(
+                z=val_data["label"][0, 0, :, :, 65].cpu().numpy(),
+                colorscale='nipy_spectral',
+                showscale=False
+            ), row=1, col=2)
+
+            # Model output prediction
+            fig.add_trace(go.Heatmap(
+                z=val_outputs[0, :, :, 65].numpy(),
+                colorscale='nipy_spectral',
+                showscale=False
+            ), row=1, col=3)
+
+            # Update layout
+            fig.update_layout(
+                title=f"Comparison for Validation Slice {i}",
+                height=600, width=1800,
+                plot_bgcolor='white',
+            )
+
+            # Save the plot as a PNG image
+            fig.write_image(f"best_model_output(combined_labels)_{i}.png")
             
             # Limit the visualization to the first 3 sets of slices
             if i == 2:

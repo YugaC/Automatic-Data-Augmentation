@@ -92,11 +92,11 @@ def main():
     ]
 
     with torch.no_grad():
-        dice_scores = []
-        for test_data in test_org_loader:
+        all_class_dice_scores = [[] for _ in range(16)]  # To store Dice scores for each class across all test images
+        individual_image_dice_scores = []  # To store Dice scores for individual test images
+
+        for idx, test_data in enumerate(test_org_loader):
             test_inputs = test_data["image"].to(device)
-            test_labels = test_data["label"].to(device)
-            
             roi_size = (128, 128, 80)
             sw_batch_size = 1
 
@@ -104,10 +104,10 @@ def main():
             test_outputs = torch.argmax(test_outputs, dim=1).detach().cpu()
 
             test_data_list = decollate_batch(test_data)
-            for idx, data in enumerate(test_data_list):
-                data["pred"] = test_outputs[idx:idx+1]
-                test_data_list[idx] = post_transforms(data)
-            
+            for i, data in enumerate(test_data_list):
+                data["pred"] = test_outputs[i:i+1]
+                test_data_list[i] = post_transforms(data)
+
             test_outputs, test_labels = from_engine(["pred", "label"])(test_data_list)
 
             for i in range(len(test_outputs)):
@@ -123,12 +123,18 @@ def main():
                 label_class = (test_labels == class_idx).float()
                 dice_score = dice_coefficient(pred_class, label_class)
                 class_dice_scores.append(dice_score.item())
+                all_class_dice_scores[class_idx].append(dice_score.item())
 
             avg_dice_score = sum(class_dice_scores) / num_classes
-            dice_scores.append(avg_dice_score)
+            individual_image_dice_scores.append(avg_dice_score)
+
+            # Print Dice scores for the current test image
+            print(f"Dice scores for test image {idx+1}:")
+            for class_idx in range(num_classes):
+                print(f" - Class {class_idx}: {class_dice_scores[class_idx]}")
 
             # Visualization of the first batch using Plotly
-            if len(dice_scores) == 1:
+            if idx == 0:  # Save prediction image for the first test image
                 test_image = test_data_list[0]["image"][0, :, :, :].cpu().numpy()
                 test_pred = test_outputs[0].cpu().numpy()
 
@@ -165,9 +171,17 @@ def main():
             torch.cuda.empty_cache()
             gc.collect()
 
-        metric_test = sum(dice_scores) / len(dice_scores)
-        print("Metric on test image spacing: ", metric_test)
+        # Compute and print the average Dice score for each class across all test images
+        print("\nAverage Dice score per class across all test images:")
+        for class_idx in range(num_classes):
+            average_class_dice = sum(all_class_dice_scores[class_idx]) / len(all_class_dice_scores[class_idx])
+            print(f" - Class {class_idx}: {average_class_dice}")
 
+        # Print the overall average Dice score across all test images
+        metric_test = sum(individual_image_dice_scores) / len(individual_image_dice_scores)
+        print("\nOverall average Dice score across all test images:", metric_test)
+
+        # Print class distribution in test dataset
         test_class_distribution = get_class_distribution(test_org_loader)
         print("Class Distribution in Test Dataset:", test_class_distribution)
 

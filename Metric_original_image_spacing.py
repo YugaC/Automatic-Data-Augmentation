@@ -66,6 +66,10 @@ n_splits = 4
 kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
 
 # Initialize metrics for cross-validation
+fold_dice_scores = [[] for _ in range(n_splits)]  # Store all class dice scores for each fold
+overall_dice_scores = []  # Store average dice score across classes for each fold
+
+# Initialize metrics for cross-validation
 val_dice_scores = []
 
 # Initialize the cross-validation loop
@@ -80,9 +84,8 @@ for train_idx, val_idx in kf.split(train_loader.dataset):  # Assuming the datase
     model.eval()
 
     # Store cumulative Dice scores for each class across all images
-    cumulative_class_dice_scores = [0.0] * 16
-    image_count = 0  # Keep track of the number of validation images
-    val_dice_scores = []  # Store Dice scores for each validation epoch
+    class_dice_scores_for_fold = [[] for _ in range(16)]  # To store scores per class for this fold
+    individual_image_dice_scores = []  # Store Dice scores for individual images
 
     with torch.no_grad():
         all_class_dice_scores = [[] for _ in range(16)]  # Store Dice scores for each class across all images
@@ -95,14 +98,14 @@ for train_idx, val_idx in kf.split(train_loader.dataset):  # Assuming the datase
             val_outputs = sliding_window_inference(val_inputs, roi_size, sw_batch_size, model)
 
             # Print model output before argmax
-            print(f"Model output shape: {val_outputs.shape}")
-            print(f"Model output unique values before argmax: {torch.unique(val_outputs)}")
+            #print(f"Model output shape: {val_outputs.shape}")
+            #print(f"Model output unique values before argmax: {torch.unique(val_outputs)}")
 
             val_outputs = torch.argmax(val_outputs, dim=1).detach().cpu()
 
             # Print model output after argmax
-            print(f"Model output shape after argmax: {val_outputs.shape}")
-            print(f"Model output unique values after argmax: {torch.unique(val_outputs)}")
+            #print(f"Model output shape after argmax: {val_outputs.shape}")
+            #print(f"Model output unique values after argmax: {torch.unique(val_outputs)}")
 
 
             val_data_list = decollate_batch(val_data)
@@ -118,16 +121,16 @@ for train_idx, val_idx in kf.split(train_loader.dataset):  # Assuming the datase
             val_labels_tensor = val_labels[0]
 
             # Print unique values in val_outputs_tensor for debugging
-            print(f"Unique values in val_outputs_tensor: {torch.unique(val_outputs_tensor)}")
+            #print(f"Unique values in val_outputs_tensor: {torch.unique(val_outputs_tensor)}")
 
 
 
             for i in range(len(val_outputs)):
                 val_outputs[i], val_labels[i] = ensure_dimensions(val_outputs[i], val_labels[i])
-                print(f"Shape of val_outputs[{i}]: {val_outputs[i].shape}")
-                print(f"Shape of val_labels[{i}]: {val_labels[i].shape}")
-                print(f"Unique values in val_outputs[{i}]: ", torch.unique(val_outputs[i]))
-                print(f"Unique values in val_labels[{i}]: ", torch.unique(val_labels[i]))
+                #print(f"Shape of val_outputs[{i}]: {val_outputs[i].shape}")
+                #print(f"Shape of val_labels[{i}]: {val_labels[i].shape}")
+                #print(f"Unique values in val_outputs[{i}]: ", torch.unique(val_outputs[i]))
+                #print(f"Unique values in val_labels[{i}]: ", torch.unique(val_labels[i]))
 
             # Stack and move to GPU
             val_outputs = torch.stack(val_outputs).to(device)
@@ -147,7 +150,8 @@ for train_idx, val_idx in kf.split(train_loader.dataset):  # Assuming the datase
             avg_dice_score = sum(class_dice_scores) / num_classes
             individual_image_dice_scores.append(avg_dice_score)
             val_dice_scores.append(avg_dice_score)
-
+        
+        
             # Print Dice scores for the current image
             print(f"Dice scores for validation image {idx+1}:")
             for class_idx in range(num_classes):
@@ -166,6 +170,12 @@ for train_idx, val_idx in kf.split(train_loader.dataset):  # Assuming the datase
         # Print the overall average Dice score across all validation images
         metric_org = sum(individual_image_dice_scores) / len(individual_image_dice_scores)
         print("\nOverall average Dice score across all validation images for fold {fold_index}:", metric_org)
+
+    # Store the overall Dice score for this fold
+    overall_dice_scores.append(np.mean(individual_image_dice_scores))
+
+    # Store class dice scores for this fold
+    fold_dice_scores[fold_index - 1] = all_class_dice_scores
 
     # Plot the Validation Dice Scores
     fig = go.Figure()
@@ -204,6 +214,31 @@ for train_idx, val_idx in kf.split(train_loader.dataset):  # Assuming the datase
 
     # Save the plot
     fig.write_image(os.path.join(root_dir, f'validation_dice_plot_fold_{fold_index}.png'))
-
+    
     # Increment fold index
     fold_index += 1
+
+
+# Calculate the average and standard deviation for each class across all folds
+mean_dice_per_class = []
+std_dice_per_class = []
+
+for class_idx in range(num_classes):
+    scores_across_folds = [np.mean(fold_dice_scores[fold][class_idx]) for fold in range(n_splits)]
+    mean_dice_per_class.append(np.mean(scores_across_folds))
+    std_dice_per_class.append(np.std(scores_across_folds))
+
+# Calculate the overall average Dice score across all classes and folds
+mean_overall_dice = np.mean(overall_dice_scores)
+std_overall_dice = np.std(overall_dice_scores)
+
+# Print the results
+print("\nMean Dice score per class across all folds:")
+for class_idx in range(num_classes):
+    print(f"Class {class_idx}: Mean = {mean_dice_per_class[class_idx]:.4f}, Std = {std_dice_per_class[class_idx]:.4f}")
+
+print(f"\nOverall mean Dice score across all classes and folds: {mean_overall_dice:.4f}")
+print(f"Overall std Dice score across all classes and folds: {std_overall_dice:.4f}")
+
+
+    
